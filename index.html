@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FieldQuote Pro - AI-Powered Restoration Quotes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: #1e40af;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* Main container */
+        .container {
+            flex: 1;
+            max-width: 400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Big buttons */
+        .big-button {
+            display: block;
+            width: 100%;
+            padding: 25px;
+            margin-bottom: 15px;
+            background: white;
+            border: 3px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .big-button:active {
+            transform: scale(0.98);
+            background: #f9fafb;
+        }
+
+        .big-button.water {
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        .big-button.fire {
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .big-button.mold {
+            border-color: #10b981;
+            color: #047857;
+        }
+
+        .big-button.primary {
+            background: #1e40af;
+            color: white;
+            border-color: #1e40af;
+        }
+
+        .big-button.success {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .big-button.secondary {
+            background: #6b7280;
+            color: white;
+            border-color: #6b7280;
+        }
+
+        .big-button.warning {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+
+        /* Severity buttons */
+        .severity-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .severity-button {
+            padding: 20px;
+            background: white;
+            border: 3px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .severity-button.selected {
+            border-color: #1e40af;
+            background: #eff6ff;
+        }
+
+        .severity-button .emoji {
+            font-size: 30px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .severity-button .label {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .severity-button .desc {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        /* Photo input hidden */
+        #photo-input {
+            display: none;
+        }
+
+        /* Photo preview */
+        .photo-preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Loading spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e5e7eb;
+            border-top-color: #1e40af;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results */
+        .result-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .result-text {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #374151;
+            margin-bottom: 15px;
+        }
+
+        /* Quote table */
+        .quote-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 16px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .quote-item.total {
+            font-weight: bold;
+            font-size: 20px;
+            color: #1e40af;
+            border-top: 2px solid #e5e7eb;
+            border-bottom: none;
+            margin-top: 10px;
+            padding-top: 15px;
+        }
+
+        /* Simple input fields */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+        }
+
+        /* Status message */
+        .status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px;
+            background: #10b981;
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            animation: slideUp 0.3s;
+            z-index: 1000;
+        }
+
+        .status.error {
+            background: #ef4444;
+        }
+
+        .status.warning {
+            background: #f59e0b;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); }
+            to { transform: translateY(0); }
+        }
+
+        /* Step indicator */
+        .step-indicator {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        /* Equipment list */
+        .equipment-tag {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin: 4px;
+            font-size: 14px;
+        }
+
+        /* Severity badges */
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .severity-badge.moderate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .severity-badge.severe {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .severity-badge.minor {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .severity-badge.none {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Info box */
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #92400e;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>⚡ FieldQuote Pro</h1>
+        <p>Major Restoration Services - AI-Powered Estimates</p>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        
+        <!-- Screen 1: Choose Damage Type -->
+        <div id="screen-damage" class="screen active">
+            <div class="step-indicator">Step 1 of 5: Select Damage Type</div>
+            
+            <button class="big-button water" onclick="selectDamage('water')">
+                💧 WATER DAMAGE
+            </button>
+            
+            <button class="big-button fire" onclick="selectDamage('fire')">
+                🔥 FIRE DAMAGE
+            </button>
+            
+            <button class="big-button mold" onclick="selectDamage('mold')">
+                🦠 MOLD DAMAGE
+            </button>
+        </div>
+
+        <!-- Screen 2: Take Photo -->
+        <div id="screen-photo" class="screen">
+            <div class="step-indicator">Step 2 of 5: Document Damage</div>
+            
+            <div class="info-box">
+                📸 Take a clear photo showing the damage. Get close enough to see details.
+            </div>
+            
+            <label for="photo-input">
+                <div class="big-button primary">
+                    📸 TAKE PHOTO
+                </div>
+            </label>
+            <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="photoTaken(event)">
+            
+            <button class="big-button" onclick="showScreen('screen-damage')">
+                ← Back
+            </button>
+        </div>
+
+        <!-- Screen 3: Severity Assessment (Manual Override) -->
+        <div id="screen-severity" class="screen">
+            <div class="step-indicator">Step 3 of 5: Damage Assessment</div>
+            
+            <!-- Show the photo they took -->
+            <img id="severity-photo-preview" class="photo-preview" style="display: none;">
+            
+            <div class="warning-box">
+                How severe is the damage in this photo?
+            </div>
+            
+            <div class="severity-grid">
+                <div class="severity-button" onclick="selectSeverity('none')">
+                    <span class="emoji">✅</span>
+                    <div class="label">No Damage</div>
+                    <div class="desc">Testing only</div>
+                </div>
+                
+                <div class="severity-button" onclick="selectSeverity('minor')">
+                    <span class="emoji">⚠️</span>
+                    <div class="label">Minor</div>
+                    <div class="desc">Small area affected</div>
+                </div>
+                
+                <div class="severity-button" onclick="selectSeverity('moderate')">
+                    <span class="emoji">🔶</span>
+                    <div class="label">Moderate</div>
+                    <div class="desc">Significant damage</div>
+                </div>
+                
+                <div class="severity-button" onclick="selectSeverity('severe')">
+                    <span class="emoji">🔴</span>
+                    <div class="label">Severe</div>
+                    <div class="desc">Extensive damage</div>
+                </div>
+            </div>
+            
+            <button class="big-button" onclick="showScreen('screen-photo')">
+                ← Retake Photo
+            </button>
+        </div>
+
+        <!-- Screen 4: Customer Info -->
+        <div id="screen-customer" class="screen">
+            <div class="step-indicator">Step 4 of 5: Customer Information</div>
+            
+            <div class="input-group">
+                <label class="input-label">Customer Name</label>
+                <input type="text" id="customer-name" class="input-field" placeholder="John Smith">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Property Address</label>
+                <input type="text" id="customer-address" class="input-field" placeholder="123 Main St, York PA">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Phone Number</label>
+                <input type="tel" id="customer-phone" class="input-field" placeholder="(717) 555-0123">
+            </div>
+
+            <button class="big-button primary" onclick="generateQuote()">
+                🤖 GENERATE QUOTE
+            </button>
+
+            <button class="big-button" onclick="showScreen('screen-severity')">
+                ← Back
+            </button>
+        </div>
+
+        <!-- Screen 5: Loading -->
+        <div id="screen-loading" class="screen">
+            <div class="loading">
+                <div class="spinner"></div>
+                <h2>Generating Quote...</h2>
+                <p style="color: #6b7280; margin-top: 10px;">AI analyzing damage severity</p>
+            </div>
+        </div>
+
+        <!-- Screen 6: Results -->
+        <div id="screen-results" class="screen">
+            <div class="step-indicator">Your Professional Quote</div>
+            
+            <!-- Photo preview -->
+            <img id="photo-preview" class="photo-preview" style="display: none;">
+            
+            <!-- Assessment -->
+            <div class="result-box">
+                <div class="result-title">
+                    Damage Assessment 
+                    <span id="severity-badge" class="severity-badge"></span>
+                </div>
+                <div id="assessment-text" class="result-text"></div>
+                <div id="equipment-list" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Detailed Quote -->
+            <div class="result-box">
+                <div class="result-title">Professional Quote</div>
+                
+                <div id="quote-details"></div>
+                
+                <div class="quote-item total">
+                    <span>TOTAL ESTIMATE</span>
+                    <span>$<span id="total-cost">0</span></span>
+                </div>
+
+                <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
+                    Valid for 30 days • 50% deposit required
+                </p>
+            </div>
+
+            <!-- Actions -->
+            <button class="big-button success" onclick="generateProposal()">
+                📄 DOWNLOAD PDF PROPOSAL
+            </button>
+
+            <button class="big-button secondary" onclick="copyQuote()">
+                📋 COPY QUICK QUOTE
+            </button>
+            
+            <button class="big-button primary" onclick="startOver()">
+                📸 NEW ASSESSMENT
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Message -->
+    <div id="status" class="status"></div>
+
+    <script>
+        // State
+        let currentDamage = null;
+        let currentPhoto = null;
+        let currentSeverity = null;
+        let currentQuoteData = null;
+
+        // ⚠️ REPLACE THIS WITH YOUR ACTUAL GEMINI API KEY
+        const API_KEY = 'AIzaSyC7DlaKQeYewRghw8sjEGz4IjmpISXR5lI';
+
+        // Pricing by severity and type
+        const QUOTE_RANGES = {
+            water: {
+                none: { min: 0, max: 0 },
+                minor: { min: 500, max: 1500, hours: 4, days: 1 },
+                moderate: { min: 1500, max: 4000, hours: 12, days: 3 },
+                severe: { min: 4000, max: 10000, hours: 24, days: 5 }
+            },
+            fire: {
+                none: { min: 0, max: 0 },
+                minor: { min: 800, max: 2000, hours: 6, days: 2 },
+                moderate: { min: 2000, max: 6000, hours: 16, days: 4 },
+                severe: { min: 6000, max: 15000, hours: 40, days: 7 }
+            },
+            mold: {
+                none: { min: 0, max: 0 },
+                minor: { min: 600, max: 1200, hours: 4, days: 1 },
+                moderate: { min: 1200, max: 3500, hours: 10, days: 3 },
+                severe: { min: 3500, max: 8000, hours: 20, days: 5 }
+            }
+        };
+
+        // Show screen
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // Select damage type
+        function selectDamage(type) {
+            currentDamage = type;
+            showScreen('screen-photo');
+            showStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} damage selected`, 2000);
+        }
+
+        // Photo taken
+        function photoTaken(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 20 * 1024 * 1024) {
+                    showStatus('Photo too large. Please use a smaller image.', 3000, 'error');
+                    return;
+                }
+                
+                currentPhoto = file;
+                
+                // Show preview on severity screen
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const severityPreview = document.getElementById('severity-photo-preview');
+                    const photoPreview = document.getElementById('photo-preview');
+                    
+                    if (severityPreview) {
+                        severityPreview.src = e.target.result;
+                        severityPreview.style.display = 'block';
+                    }
+                    if (photoPreview) {
+                        photoPreview.src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+                
+                showScreen('screen-severity');
+                showStatus('Photo captured - now select damage severity', 3000);
+            }
+        }
+
+        // Select severity (manual override)
+        function selectSeverity(severity) {
+            currentSeverity = severity;
+            
+            // Update UI
+            document.querySelectorAll('.severity-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.closest('.severity-button').classList.add('selected');
+            
+            // Handle no damage case
+            if (severity === 'none') {
+                showStatus('No damage selected - useful for testing', 3000, 'warning');
+                showNoDamageResults();
+            } else {
+                // Proceed to customer info
+                setTimeout(() => {
+                    showScreen('screen-customer');
+                }, 500);
+            }
+        }
+
+        // Show no damage results
+        function showNoDamageResults() {
+            document.getElementById('screen-results').innerHTML = `
+                <div class="step-indicator">Assessment Complete</div>
+                
+                <img id="photo-preview-no" class="photo-preview" style="display: block;">
+                
+                <div class="result-box">
+                    <div class="result-title">✅ No Damage Detected</div>
+                    <div class="result-text">
+                        No ${currentDamage} damage was identified in this photo.
+                        This may be a test photo or the damage may not be visible.
+                    </div>
+                    
+                    <p style="margin-top: 20px; color: #6b7280;">
+                        If damage exists but isn't visible in the photo:
+                        <br>• Take photo closer to the damage
+                        <br>• Ensure good lighting
+                        <br>• Focus on the damaged area
+                    </p>
+                </div>
+                
+                <button class="big-button primary" onclick="showScreen('screen-photo')">
+                    📸 RETAKE PHOTO
+                </button>
+                
+                <button class="big-button" onclick="startOver()">
+                    🏠 START OVER
+                </button>
+            `;
+            
+            // Set photo
+            document.getElementById('photo-preview-no').src = document.getElementById('severity-photo-preview').src;
+            
+            showScreen('screen-results');
+        }
+
+        // Generate quote based on manual severity selection
+        async function generateQuote() {
+            showScreen('screen-loading');
+            
+            // Simulate processing
+            setTimeout(() => {
+                if (currentSeverity === 'none') {
+                    showNoDamageResults();
+                    return;
+                }
+                
+                // Get quote range for selected severity
+                const range = QUOTE_RANGES[currentDamage][currentSeverity];
+                
+                // Calculate costs
+                const laborRate = 95;
+                const laborCost = range.hours * laborRate;
+                const equipmentCost = range.days * 200;
+                const materialsCost = Math.round((laborCost + equipmentCost) * 0.3);
+                const totalCost = laborCost + equipmentCost + materialsCost;
+                
+                // Create quote data
+                currentQuoteData = {
+                    severity: currentSeverity,
+                    description: getDescription(currentDamage, currentSeverity),
+                    equipment: getEquipment(currentDamage, currentSeverity),
+                    laborHours: range.hours,
+                    equipmentDays: range.days,
+                    laborCost: laborCost,
+                    equipmentCost: equipmentCost,
+                    materialsCost: materialsCost,
+                    totalCost: totalCost
+                };
+                
+                // Display results
+                displayQuoteResults();
+                
+            }, 2000);
+        }
+
+        // Get description based on type and severity
+        function getDescription(type, severity) {
+            const descriptions = {
+                water: {
+                    minor: "Limited water damage affecting small area. Quick extraction and drying will prevent further damage.",
+                    moderate: "Significant water damage requiring professional extraction and multiple day drying process.",
+                    severe: "Extensive water damage with structural concerns. Full restoration required including potential reconstruction."
+                },
+                fire: {
+                    minor: "Light smoke damage primarily affecting surface areas. Professional cleaning will restore affected areas.",
+                    moderate: "Moderate fire and smoke damage requiring deep cleaning, odor treatment, and some reconstruction.",
+                    severe: "Severe fire damage with structural implications. Complete restoration including major reconstruction needed."
+                },
+                mold: {
+                    minor: "Localized mold growth in contained area. Standard remediation protocol will fully address issue.",
+                    moderate: "Significant mold presence requiring containment, removal, and treatment of affected areas.",
+                    severe: "Extensive mold infestation requiring full remediation, structural repairs, and prevention measures."
+                }
+            };
+            
+            return descriptions[type][severity];
+        }
+
+        // Get equipment list based on type and severity
+        function getEquipment(type, severity) {
+            const equipment = {
+                water: {
+                    minor: ['Moisture Meters', 'Air Movers (2)', 'Small Dehumidifier'],
+                    moderate: ['Air Movers (4)', 'LGR Dehumidifier', 'Moisture Meters', 'Extraction Unit'],
+                    severe: ['Air Movers (6+)', 'Multiple LGR Dehumidifiers', 'Truck-Mount Extraction', 'Air Scrubbers']
+                },
+                fire: {
+                    minor: ['HEPA Vacuum', 'Air Scrubber', 'Ozone Generator'],
+                    moderate: ['HEPA Air Scrubbers (2)', 'Hydroxyl Generator', 'Thermal Fogger'],
+                    severe: ['Multiple Air Scrubbers', 'Industrial Hydroxyl Units', 'Full Restoration Equipment']
+                },
+                mold: {
+                    minor: ['HEPA Vacuum', 'Negative Air Machine', 'Basic PPE'],
+                    moderate: ['Negative Air Machines (2)', 'HEPA Vacuums', 'Containment Barriers'],
+                    severe: ['Multiple Negative Air Units', 'Full Containment System', 'Industrial HEPA Equipment']
+                }
+            };
+            
+            return equipment[type][severity];
+        }
+
+        // Display quote results
+        function displayQuoteResults() {
+            // Ensure we're on the right screen first
+            const resultsScreen = document.getElementById('screen-results');
+            if (!resultsScreen) {
+                console.error('Results screen not found');
+                return;
+            }
+            
+            // Make sure the results screen has all required elements
+            if (!document.getElementById('assessment-text')) {
+                resultsScreen.innerHTML = `
+                    <div class="step-indicator">Your Professional Quote</div>
+                    
+                    <!-- Photo preview -->
+                    <img id="photo-preview" class="photo-preview" style="display: none;">
+                    
+                    <!-- Assessment -->
+                    <div class="result-box">
+                        <div class="result-title">
+                            Damage Assessment 
+                            <span id="severity-badge" class="severity-badge"></span>
+                        </div>
+                        <div id="assessment-text" class="result-text"></div>
+                        <div id="equipment-list" style="margin-top: 15px;"></div>
+                    </div>
+
+                    <!-- Detailed Quote -->
+                    <div class="result-box">
+                        <div class="result-title">Professional Quote</div>
+                        
+                        <div id="quote-details"></div>
+                        
+                        <div class="quote-item total">
+                            <span>TOTAL ESTIMATE</span>
+                            <span>$<span id="total-cost">0</span></span>
+                        </div>
+
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
+                            Valid for 30 days • 50% deposit required
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <button class="big-button success" onclick="generateProposal()">
+                        📄 DOWNLOAD PDF PROPOSAL
+                    </button>
+
+                    <button class="big-button secondary" onclick="copyQuote()">
+                        📋 COPY QUICK QUOTE
+                    </button>
+                    
+                    <button class="big-button primary" onclick="startOver()">
+                        📸 NEW ASSESSMENT
+                    </button>
+                `;
+            }
+            
+            // Now update the elements
+            const assessmentText = document.getElementById('assessment-text');
+            if (assessmentText) {
+                assessmentText.textContent = currentQuoteData.description;
+            }
+            
+            // Update severity badge
+            const severityBadge = document.getElementById('severity-badge');
+            if (severityBadge) {
+                severityBadge.textContent = currentQuoteData.severity.toUpperCase();
+                severityBadge.className = 'severity-badge ' + currentQuoteData.severity;
+            }
+            
+            // Update equipment list
+            const equipmentList = document.getElementById('equipment-list');
+            if (equipmentList) {
+                const equipmentHtml = currentQuoteData.equipment.map(item => 
+                    `<span class="equipment-tag">${item}</span>`
+                ).join('');
+                equipmentList.innerHTML = '<strong>Required Equipment:</strong><br>' + equipmentHtml;
+            }
+            
+            // Build quote
+            const quoteDetails = document.getElementById('quote-details');
+            if (quoteDetails) {
+                const quoteHtml = `
+                    <div class="quote-item">
+                        <span>Labor (${currentQuoteData.laborHours} hours @ $95/hr)</span>
+                        <span>$${currentQuoteData.laborCost}</span>
+                    </div>
+                    <div class="quote-item">
+                        <span>Equipment (${currentQuoteData.equipmentDays} days)</span>
+                        <span>$${currentQuoteData.equipmentCost}</span>
+                    </div>
+                    <div class="quote-item">
+                        <span>Materials & Supplies</span>
+                        <span>$${currentQuoteData.materialsCost}</span>
+                    </div>
+                `;
+                quoteDetails.innerHTML = quoteHtml;
+            }
+            
+            const totalCost = document.getElementById('total-cost');
+            if (totalCost) {
+                totalCost.textContent = currentQuoteData.totalCost.toLocaleString();
+            }
+            
+            // Show photo preview if available
+            const photoPreview = document.getElementById('photo-preview');
+            const severityPhotoPreview = document.getElementById('severity-photo-preview');
+            if (photoPreview && severityPhotoPreview && severityPhotoPreview.src) {
+                photoPreview.src = severityPhotoPreview.src;
+                photoPreview.style.display = 'block';
+            }
+            
+            // Show results
+            showScreen('screen-results');
+            showStatus('Quote generated successfully!', 3000);
+        }
+
+        // Generate PDF proposal
+        function generateProposal() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Get customer info
+            const customerName = document.getElementById('customer-name').value || 'Valued Customer';
+            const customerAddress = document.getElementById('customer-address').value || 'Property Address';
+            const customerPhone = document.getElementById('customer-phone').value || 'Contact Number';
+            const today = new Date().toLocaleDateString();
+            const jobNumber = 'EST-' + Date.now().toString().slice(-6);
+            
+            // Colors
+            const primaryBlue = [30, 64, 175];
+            const darkGray = [55, 65, 81];
+            const lightGray = [107, 114, 128];
+            
+            // Page setup
+            let yPosition = 20;
+            const leftMargin = 20;
+            const pageWidth = 170;
+            
+            // Header with company branding
+            doc.setFillColor(...primaryBlue);
+            doc.rect(0, 0, 220, 40, 'F');
+            
+            // Company name and logo area
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('MAJOR RESTORATION SERVICES', leftMargin, 20);
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            doc.text('24/7 Emergency Response | IICRC Certified | Insurance Specialists', leftMargin, 28);
+            doc.text('717-855-2367 | www.majorrestoration.com', leftMargin, 35);
+            
+            yPosition = 55;
+            
+            // Proposal title
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('RESTORATION PROPOSAL', 105, yPosition, { align: 'center' });
+            
+            yPosition += 15;
+            
+            // Job details box
+            doc.setDrawColor(...lightGray);
+            doc.setLineWidth(0.5);
+            doc.rect(leftMargin, yPosition - 5, pageWidth, 35, 'S');
+            
+            // Two column layout for job details
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(...darkGray);
+            
+            // Left column
+            doc.setFont(undefined, 'bold');
+            doc.text('Proposal #:', leftMargin + 5, yPosition);
+            doc.setFont(undefined, 'normal');
+            doc.text(jobNumber, leftMargin + 30, yPosition);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Date:', leftMargin + 5, yPosition + 7);
+            doc.setFont(undefined, 'normal');
+            doc.text(today, leftMargin + 30, yPosition + 7);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Valid Until:', leftMargin + 5, yPosition + 14);
+            doc.setFont(undefined, 'normal');
+            const validUntil = new Date();
+            validUntil.setDate(validUntil.getDate() + 30);
+            doc.text(validUntil.toLocaleDateString(), leftMargin + 30, yPosition + 14);
+            
+            // Right column - Customer info
+            doc.setFont(undefined, 'bold');
+            doc.text('Prepared For:', leftMargin + 90, yPosition);
+            doc.setFont(undefined, 'normal');
+            doc.text(customerName, leftMargin + 90, yPosition + 7);
+            doc.text(customerAddress, leftMargin + 90, yPosition + 14);
+            doc.text(customerPhone, leftMargin + 90, yPosition + 21);
+            
+            yPosition += 40;
+            
+            // Damage Assessment Section
+            doc.setFillColor(...primaryBlue);
+            doc.rect(leftMargin, yPosition, pageWidth, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text('DAMAGE ASSESSMENT', leftMargin + 2, yPosition + 5.5);
+            
+            yPosition += 12;
+            
+            // Damage details
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(10);
+            
+            // Damage type and severity badges
+            doc.setFont(undefined, 'bold');
+            doc.text('Type:', leftMargin, yPosition);
+            doc.setFont(undefined, 'normal');
+            const damageTypeFormatted = currentDamage.charAt(0).toUpperCase() + currentDamage.slice(1) + ' Damage';
+            doc.text(damageTypeFormatted, leftMargin + 15, yPosition);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Severity:', leftMargin + 60, yPosition);
+            
+            // Severity color coding
+            const severityColors = {
+                minor: [16, 185, 129],
+                moderate: [245, 158, 11],
+                severe: [239, 68, 68]
+            };
+            
+            if (currentQuoteData.severity && severityColors[currentQuoteData.severity]) {
+                doc.setTextColor(...severityColors[currentQuoteData.severity]);
+                doc.setFont(undefined, 'bold');
+                doc.text(currentQuoteData.severity.toUpperCase(), leftMargin + 80, yPosition);
+            }
+            
+            yPosition += 10;
+            
+            // Assessment description
+            doc.setTextColor(...darkGray);
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            const descriptionLines = doc.splitTextToSize(currentQuoteData.description, pageWidth);
+            doc.text(descriptionLines, leftMargin, yPosition);
+            yPosition += descriptionLines.length * 5 + 5;
+            
+            // Required equipment
+            doc.setFont(undefined, 'bold');
+            doc.text('Required Equipment:', leftMargin, yPosition);
+            doc.setFont(undefined, 'normal');
+            yPosition += 5;
+            const equipmentText = currentQuoteData.equipment.join(', ');
+            const equipmentLines = doc.splitTextToSize(equipmentText, pageWidth);
+            doc.text(equipmentLines, leftMargin, yPosition);
+            yPosition += equipmentLines.length * 5 + 10;
+            
+            // Cost Breakdown Section
+            doc.setFillColor(...primaryBlue);
+            doc.rect(leftMargin, yPosition, pageWidth, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text('COST BREAKDOWN', leftMargin + 2, yPosition + 5.5);
+            
+            yPosition += 12;
+            
+            // Cost table
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(10);
+            
+            // Table header
+            doc.setFont(undefined, 'bold');
+            doc.text('Service Description', leftMargin, yPosition);
+            doc.text('Details', leftMargin + 80, yPosition);
+            doc.text('Amount', leftMargin + 140, yPosition);
+            
+            // Underline
+            doc.setDrawColor(...lightGray);
+            doc.line(leftMargin, yPosition + 2, leftMargin + pageWidth, yPosition + 2);
+            
+            yPosition += 8;
+            
+            // Labor row
+            doc.setFont(undefined, 'normal');
+            doc.text('Professional Labor', leftMargin, yPosition);
+            doc.text(`${currentQuoteData.laborHours} hours @ $95/hr`, leftMargin + 80, yPosition);
+            doc.text(`$${currentQuoteData.laborCost.toLocaleString()}`, leftMargin + 140, yPosition);
+            
+            yPosition += 7;
+            
+            // Equipment row
+            doc.text('Equipment Rental', leftMargin, yPosition);
+            doc.text(`${currentQuoteData.equipmentDays} days`, leftMargin + 80, yPosition);
+            doc.text(`$${currentQuoteData.equipmentCost.toLocaleString()}`, leftMargin + 140, yPosition);
+            
+            yPosition += 7;
+            
+            // Materials row
+            doc.text('Materials & Supplies', leftMargin, yPosition);
+            doc.text('As needed', leftMargin + 80, yPosition);
+            doc.text(`$${currentQuoteData.materialsCost.toLocaleString()}`, leftMargin + 140, yPosition);
+            
+            yPosition += 8;
+            
+            // Total line
+            doc.setLineWidth(1);
+            doc.line(leftMargin + 100, yPosition, leftMargin + pageWidth, yPosition);
+            
+            yPosition += 6;
+            
+            // Total amount
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('TOTAL INVESTMENT:', leftMargin + 90, yPosition);
+            doc.setTextColor(...primaryBlue);
+            doc.setFontSize(14);
+            doc.text(`$${currentQuoteData.totalCost.toLocaleString()}`, leftMargin + 140, yPosition);
+            
+            yPosition += 15;
+            
+            // Terms and Conditions
+            doc.setTextColor(...darkGray);
+            doc.setFillColor(...lightGray);
+            doc.setFillColor(240, 240, 240);
+            doc.rect(leftMargin, yPosition, pageWidth, 50, 'F');
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('TERMS & CONDITIONS', leftMargin + 2, yPosition + 5);
+            
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(9);
+            const terms = [
+                '• This proposal is valid for 30 days from the date above',
+                '• 50% deposit required to begin work',
+                '• Balance due upon completion of restoration services',
+                '• All work performed to IICRC S500 standards',
+                '• Direct insurance billing available',
+                '• 1-year warranty on all restoration work',
+                '• Emergency response available 24/7/365'
+            ];
+            
+            let termY = yPosition + 12;
+            terms.forEach(term => {
+                doc.text(term, leftMargin + 2, termY);
+                termY += 5;
+            });
+            
+            yPosition += 55;
+            
+            // Acceptance section
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('ACCEPTANCE OF PROPOSAL', leftMargin, yPosition);
+            
+            yPosition += 7;
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(9);
+            doc.text('By signing below, you authorize Major Restoration Services to begin work as outlined above.', leftMargin, yPosition);
+            
+            yPosition += 12;
+            
+            // Signature lines
+            doc.line(leftMargin, yPosition, leftMargin + 70, yPosition);
+            doc.line(leftMargin + 100, yPosition, leftMargin + 170, yPosition);
+            
+            yPosition += 4;
+            doc.text('Customer Signature', leftMargin, yPosition);
+            doc.text('Date', leftMargin + 100, yPosition);
+            
+            // Footer
+            yPosition = 280;
+            doc.setTextColor(...lightGray);
+            doc.setFontSize(8);
+            doc.text('Thank you for choosing Major Restoration Services', 105, yPosition, { align: 'center' });
+            doc.text('License #PA-12345 | Bonded & Insured', 105, yPosition + 4, { align: 'center' });
+            
+            // Save the PDF
+            const fileName = `Proposal_${customerName.replace(/\s+/g, '_')}_${jobNumber}.pdf`;
+            doc.save(fileName);
+            
+            // Show success message
+            showStatus(`PDF Proposal saved as ${fileName}`, 5000);
+        }
+
+        // Copy quick quote
+        function copyQuote() {
+            const total = document.getElementById('total-cost').textContent;
+            
+            const quickQuote = `QUICK QUOTE - Major Restoration
+${currentDamage.toUpperCase()} DAMAGE - ${currentSeverity.toUpperCase()}
+Total: $${total}
+Valid 30 days • Call 717-855-2367`;
+
+            navigator.clipboard.writeText(quickQuote).then(() => {
+                showStatus('Quick quote copied!', 3000);
+            });
+        }
+
+        // Start over
+        function startOver() {
+            currentDamage = null;
+            currentPhoto = null;
+            currentSeverity = null;
+            currentQuoteData = null;
+            document.getElementById('photo-input').value = '';
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-address').value = '';
+            document.getElementById('customer-phone').value = '';
+            document.querySelectorAll('.severity-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            showScreen('screen-damage');
+        }
+
+        // Show status message
+        function showStatus(message, duration = 3000, type = '') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, duration);
+        }
+
+        // Initialize
+        console.log('FieldQuote Pro Ready - Manual Override Version');
+        
+        // Check API key
+        if (API_KEY === 'YOUR_API_KEY_HERE') {
+            console.log('Note: Add Gemini API key for future AI features');
+        }
+    </script>
+</body>
+</html>
