@@ -2057,59 +2057,100 @@
         // Parse mold damage AI response
         function parseMoldDamageResponse(aiResponse) {
             try {
-                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                // Clean the response - remove any markdown or extra text
+                const cleanedResponse = aiResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) {
                     throw new Error('No JSON found in mold response');
                 }
                 
                 const aiData = JSON.parse(jsonMatch[0]);
                 
-                // Map condition level to severity
-                const severity = aiData.conditionLevel === 1 ? 'minor' :
-                               aiData.conditionLevel === 2 ? 'moderate' : 'severe';
+                // Check for errors or no mold
+                if (aiData.error || !aiData.has_mold) {
+                    console.log('No mold detected or error in analysis:', aiData.error);
+                    return null;
+                }
                 
-                // Determine mold type from likely species
+                // Map condition level to severity
+                const severity = aiData.condition_level === 1 ? 'minor' :
+                               aiData.condition_level === 2 ? 'moderate' : 'severe';
+                
+                // Determine mold type from the response
                 let moldType = 'aspergillus'; // Default
-                if (aiData.moldTypesLikely && aiData.moldTypesLikely.length > 0) {
-                    const firstType = aiData.moldTypesLikely[0].toLowerCase();
+                if (aiData.mold_types && aiData.mold_types.length > 0) {
+                    const firstType = aiData.mold_types[0].type.toLowerCase();
                     if (firstType.includes('stachybotrys') || firstType.includes('black')) {
                         moldType = 'stachybotrys';
                     } else if (firstType.includes('penicillium')) {
                         moldType = 'penicillium';
                     } else if (firstType.includes('cladosporium')) {
                         moldType = 'cladosporium';
+                    } else if (firstType.includes('alternaria')) {
+                        moldType = 'alternaria';
+                    } else if (firstType.includes('chaetomium')) {
+                        moldType = 'chaetomium';
+                    } else if (firstType.includes('aspergillus')) {
+                        moldType = 'aspergillus';
                     }
                 }
                 
                 const mold = MOLD_TYPES[moldType];
                 
-                // Determine containment level
-                const sqft = aiData.visibleGrowthSqFt || 10;
-                let containmentLevel = 'level1';
-                if (sqft > 100) containmentLevel = 'level4';
-                else if (sqft > 30) containmentLevel = 'level3';
-                else if (sqft > 10) containmentLevel = 'level2';
+                // Get containment level
+                const containmentLevel = `level${aiData.containment_level}`;
+                const containment = CONTAINMENT_LEVELS[containmentLevel] || CONTAINMENT_LEVELS.level2;
                 
-                const containment = CONTAINMENT_LEVELS[containmentLevel];
-                
-                // Build equipment list
-                const equipment = aiData.equipmentNeeded || [];
+                // Build equipment list from response
+                const equipment = aiData.equipment_list || [];
                 if (equipment.length === 0) {
-                    equipment.push('HEPA Air Scrubber', 'Negative Air Machine', 'HEPA Vacuum');
-                    containment.equipment.forEach(item => {
-                        if (!equipment.includes(item)) equipment.push(item);
-                    });
+                    equipment.push('HEPA Air Scrubber: 1', 'Negative Air Machine: 1', 'HEPA Vacuum: 1');
                 }
                 
                 // Process costs
-                const totalCost = aiData.estimatedCost ? 
-                    (aiData.estimatedCost.high + aiData.estimatedCost.low) / 2 : 3000;
+                const totalCost = aiData.cost_estimate ? 
+                    (aiData.cost_estimate.high + aiData.cost_estimate.low) / 2 : 3000;
+                
+                // Build comprehensive description
+                let description = `AI-Analyzed (${aiData.confidence_percent}% confidence): `;
+                if (aiData.mold_types && aiData.mold_types.length > 0) {
+                    const moldDesc = aiData.mold_types.map(m => 
+                        `${m.type} (${m.likelihood} likelihood)`
+                    ).join(', ');
+                    description += `${moldDesc} detected. `;
+                } else {
+                    description += `${mold.name} detected. `;
+                }
+                description += `${aiData.square_footage} sq ft affected. `;
+                description += `${aiData.moisture_source}. `;
+                description += `Level ${aiData.containment_level} containment required.`;
                 
                 // Build warnings
-                let warnings = aiData.insuranceNotes || [];
-                warnings.push(MOLD_ESTIMATE_VALIDATION.requirements.moistureSource);
+                let warnings = aiData.insurance_notes || [];
+                if (aiData.moisture_source === 'investigation needed') {
+                    warnings.push(MOLD_ESTIMATE_VALIDATION.requirements.moistureSource);
+                }
                 if (moldType === 'stachybotrys') {
                     warnings.push(MOLD_ESTIMATE_VALIDATION.warningFlags.blackMold);
+                }
+                
+                // Process breakdown if available
+                let breakdown = null;
+                if (aiData.cost_estimate && aiData.cost_estimate.breakdown) {
+                    const b = aiData.cost_estimate.breakdown;
+                    breakdown = {
+                        assessment: 350, // Standard assessment
+                        containment: b.containment || 750,
+                        removal: b.removal || 0,
+                        cleaning: b.cleaning || 0,
+                        hepaVacuum: Math.round((b.cleaning || 0) * 0.2), // Estimate HEPA as 20% of cleaning
+                        antimicrobial: Math.round((b.cleaning || 0) * 0.3), // Estimate antimicrobial
+                        encapsulation: 0, // Only for severe
+                        verification: b.testing || 0,
+                        disposal: Math.round((b.removal || 0) * 0.1), // Estimate disposal as 10% of removal
+                        equipment: b.equipment || 400,
+                        labor: Math.round((aiData.days_required || 2) * 8 * 87.50)
+                    };
                 }
                 
                 return {
@@ -2118,90 +2159,104 @@
                     moldName: mold.name,
                     containmentLevel: containmentLevel,
                     containmentDesc: containment.description,
-                    healthRisk: aiData.healthRiskScore || 5,
-                    condition: `condition${aiData.conditionLevel || 3}`,
-                    description: `AI-Analyzed: ${mold.name} detected. ${sqft} sq ft affected. ${aiData.moistureSource || 'Moisture source needs identification'}. ${containment.description} containment required.`,
+                    healthRisk: aiData.health_risk || 5,
+                    condition: `condition${aiData.condition_level}`,
+                    description: description,
                     equipment: equipment,
-                    laborHours: aiData.remediationDays ? aiData.remediationDays * 8 : 8,
-                    equipmentDays: aiData.remediationDays || 2,
-                    laborCost: Math.round((aiData.remediationDays || 1) * 8 * 87.50),
-                    equipmentCost: Math.round((aiData.remediationDays || 2) * 400),
-                    materialsCost: Math.round(totalCost * 0.6),
+                    laborHours: (aiData.days_required || 2) * 8,
+                    equipmentDays: aiData.days_required || 2,
+                    laborCost: Math.round((aiData.days_required || 2) * 8 * 87.50),
+                    equipmentCost: breakdown ? breakdown.equipment : Math.round((aiData.days_required || 2) * 400),
+                    materialsCost: breakdown ? 
+                        (breakdown.removal + breakdown.cleaning + breakdown.antimicrobial + breakdown.containment) :
+                        Math.round(totalCost * 0.6),
                     totalCost: Math.round(totalCost),
-                    affectedArea: sqft,
+                    affectedArea: aiData.square_footage,
                     validationWarnings: warnings,
                     aiAnalyzed: true,
-                    immediateActions: aiData.immediateActions,
-                    testingRequired: aiData.professionalTestingRequired
+                    confidence: aiData.confidence_percent,
+                    immediateActions: aiData.urgent_actions,
+                    testingRequired: aiData.requires_testing,
+                    breakdown: breakdown,
+                    affectedMaterials: aiData.affected_materials
                 };
                 
             } catch (error) {
-                console.error('Error parsing mold AI response:', error);
+                console.error('Error parsing mold AI response:', error, aiResponse);
                 return null;
             }
         }
 
-        // Build the mold remediation AI prompt
+        // Build the mold remediation AI prompt - JSON only response
         function buildMoldRemediationPrompt() {
-            return `You are an IICRC S520-certified mold assessment specialist analyzing photos for Major Restoration Services in York, PA.
+            return `Analyze this image as an IICRC S520 certified mold specialist for Major Restoration Services in York, PA.
 
-CRITICAL CONTEXT:
-- Location: York, PA (high humidity region)
-- Standards: Follow IICRC S520-2024 guidelines
-- Purpose: Insurance-compliant documentation
-- Pricing Region: South Central Pennsylvania
+RETURN JSON ONLY - no markdown, no explanation text outside the JSON.
 
-Analyze this image for mold contamination and provide:
+Evaluate the image for mold contamination and provide this EXACT structure:
 
-1. MOLD CONDITION CLASSIFICATION (per IICRC S520):
-   - Condition 1: Normal fungal ecology (no action needed)
-   - Condition 2: Settled spores requiring cleaning (no visible growth)
-   - Condition 3: Active mold growth requiring remediation
-   
-2. VISUAL IDENTIFICATION:
-   Describe ALL observed characteristics:
-   - Color patterns (black, green, white, gray, brown, yellow, orange)
-   - Texture (fuzzy, velvety, slimy, powdery, cottony, hairy)
-   - Growth pattern (clustered, spread, circular colonies, following moisture)
-   - Surface coverage (spots, patches, continuous growth)
-   
-3. PROBABLE MOLD TYPES (based on visual indicators):
-   ${JSON.stringify(MOLD_TYPES, null, 2)}
-   
-4. CONTAINMENT REQUIREMENTS:
-   ${JSON.stringify(CONTAINMENT_LEVELS, null, 2)}
-   
-5. COST ESTIMATE using York, PA rates:
-   ${JSON.stringify(YORK_PA_MOLD_PRICING, null, 2)}
-   
-6. HEALTH RISK ASSESSMENT:
-   Rate urgency (1-10) based on toxigenic potential, location, and size
-
-Return JSON with complete assessment:
 {
-  "conditionLevel": 1-3,
-  "contaminationLevel": 1-5,
-  "visibleGrowthSqFt": number,
-  "moldTypesLikely": ["species names"],
-  "materialsAffected": {
-    "remove": ["list"],
-    "clean": ["list"],
-    "monitor": ["list"]
+  "has_mold": boolean,
+  "confidence_percent": number (0-100),
+  "condition_level": number (1-3 per IICRC S520),
+  "square_footage": number,
+  "mold_types": [
+    {
+      "type": "species name",
+      "likelihood": "high/medium/low",
+      "visual_indicators": "what you see"
+    }
+  ],
+  "affected_materials": {
+    "must_remove": ["drywall", "carpet", etc],
+    "can_clean": ["wood framing", "concrete", etc],
+    "surface_only": ["glass", "metal", etc]
   },
-  "containmentRequired": "level description",
-  "equipmentNeeded": ["detailed list"],
-  "healthRiskScore": 1-10,
-  "estimatedCost": {
+  "containment_level": number (1-5),
+  "equipment_list": [
+    "item: quantity"
+  ],
+  "moisture_source": "visible source or 'investigation needed'",
+  "health_risk": number (1-10),
+  "cost_estimate": {
     "low": number,
     "high": number,
-    "breakdown": {}
+    "breakdown": {
+      "containment": number,
+      "removal": number,
+      "cleaning": number,
+      "equipment": number,
+      "testing": number
+    }
   },
-  "remediationDays": number,
-  "moistureSource": "description",
-  "insuranceNotes": ["key points"],
-  "immediateActions": ["urgent steps"],
-  "professionalTestingRequired": boolean
-}`;
+  "days_required": number,
+  "urgent_actions": ["immediate steps needed"],
+  "requires_testing": boolean,
+  "insurance_notes": ["relevant points"],
+  "error": null or "error message if image unclear"
+}
+
+IDENTIFICATION RULES:
+- Black slimy = likely Stachybotrys (toxic)
+- Green fuzzy = likely Aspergillus/Penicillium  
+- White cottony = likely Chaetomium (early stage)
+- Brown/gray velvety = likely Alternaria
+- No visible growth but staining = Condition 2
+- Active growth visible = Condition 3
+
+COST RATES (Pennsylvania 2024):
+- Removal: $15-30/sq ft
+- Cleaning: $10-15/sq ft  
+- Containment: $500-1500 base
+- Equipment rental: $200-500/day
+- Testing: $300-500/sample
+
+REJECT ANALYSIS IF:
+- Image too blurry/dark
+- No indoor surfaces visible
+- Clearly not mold (paint, dirt, shadows)
+
+Return ONLY the JSON object. No additional text.`;
         }
 
         // Build the enhanced fire restoration AI prompt
