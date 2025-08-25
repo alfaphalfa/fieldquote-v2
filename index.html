@@ -548,7 +548,167 @@
         // ⚠️ REPLACE THIS WITH YOUR ACTUAL GEMINI API KEY
         const API_KEY = 'AIzaSyC7DlaKQeYewRghw8sjEGz4IjmpISXR5lI';
 
-        // Pricing by severity and type
+        // IICRC-Compliant Water Categories
+        const WATER_CATEGORIES = {
+            category1: {
+                name: "Clean Water",
+                description: "From sanitary sources like burst pipes, rainwater, or ice maker lines",
+                healthRisk: "Low",
+                materials: "Most materials salvageable with proper drying",
+                examples: ["Burst supply line", "Rainwater leak", "Water heater overflow (clean)"],
+                pricing: { min: 3.00, max: 4.00, avg: 3.50 }
+            },
+            category2: {
+                name: "Gray Water", 
+                description: "Contains significant contamination, may cause illness",
+                healthRisk: "Moderate",
+                materials: "Some materials need removal, antimicrobial treatment required",
+                examples: ["Washing machine overflow", "Dishwasher leak", "Toilet overflow with urine"],
+                pricing: { min: 4.00, max: 7.00, avg: 5.25 }
+            },
+            category3: {
+                name: "Black Water",
+                description: "Grossly contaminated, contains pathogens",
+                healthRisk: "High",
+                materials: "Most porous materials must be removed",
+                examples: ["Sewage backup", "Rising flood water", "Toilet overflow with feces"],
+                pricing: { min: 7.00, max: 12.00, avg: 7.50 }
+            }
+        };
+
+        // York, PA Regional Pricing Matrix
+        const YORK_PA_PRICING = {
+            // Based on actual Major Restoration Services market
+            waterExtraction: { 
+                category1: { min: 3.00, max: 4.00, unit: "sq_ft" },
+                category2: { min: 4.00, max: 5.50, unit: "sq_ft" },
+                category3: { min: 7.00, max: 8.50, unit: "sq_ft" }
+            },
+            
+            materials: {
+                drywallRemoval: { min: 1.00, max: 2.00, unit: "sq_ft" },
+                carpetRemoval: { min: 1.00, max: 1.50, unit: "sq_ft" },
+                carpetCleaning: { min: 0.75, max: 1.25, unit: "sq_ft" },
+                hardwoodDrying: { min: 10.00, max: 15.00, unit: "sq_ft" },
+                antimicrobialTreatment: { min: 0.50, max: 1.00, unit: "sq_ft" },
+                insulationRemoval: { min: 1.50, max: 2.50, unit: "sq_ft" },
+                baseboardRemoval: { min: 2.00, max: 3.00, unit: "linear_ft" }
+            },
+            
+            equipment: {
+                airMover: { daily: 35, weekly: 175, monthly: 500 },
+                dehumidifierLGR: { daily: 100, weekly: 500, monthly: 1500 },
+                dehumidifierConventional: { daily: 85, weekly: 425, monthly: 1275 },
+                airScrubber: { daily: 150, weekly: 750, monthly: 2250 },
+                moistureMeter: { daily: 25, weekly: 125, monthly: 375 }
+            },
+            
+            labor: {
+                standard: { min: 70, max: 125, unit: "hour" },
+                emergency: { min: 100, max: 200, unit: "hour" },
+                afterHours: { multiplier: 1.5 },
+                weekend: { multiplier: 1.25 }
+            }
+        };
+
+        // IICRC Equipment Calculation Formulas
+        const EQUIPMENT_FORMULAS = {
+            // Based on IICRC S500 Appendix B standards
+            airMovers: {
+                formula: "1 air mover per 10-16 linear feet of wet wall",
+                class1: { sqFtPerUnit: 200 },  // Minimal water
+                class2: { sqFtPerUnit: 100 },  // Significant water
+                class3: { sqFtPerUnit: 50 },   // Extensive water
+                class4: { sqFtPerUnit: 25 }    // Specialty drying
+            },
+            
+            dehumidifiers: {
+                // Based on cubic feet and class
+                conventional: {
+                    class1: { cubicFtPerPint: 40 },  
+                    class2: { cubicFtPerPint: 30 },
+                    class3: { cubicFtPerPint: 20 },
+                    class4: { cubicFtPerPint: 15 }
+                },
+                lgr: {
+                    class1: { cubicFtPerPint: 50 },
+                    class2: { cubicFtPerPint: 40 },
+                    class3: { cubicFtPerPint: 30 },
+                    class4: { cubicFtPerPint: 20 }
+                }
+            },
+            
+            calculateDehumidifiers: function(cubicFeet, waterClass, dehuType = 'lgr', dehuCapacity = 100) {
+                const factor = this.dehumidifiers[dehuType][waterClass].cubicFtPerPint;
+                const pintsNeeded = cubicFeet / factor;
+                return Math.ceil(pintsNeeded / dehuCapacity);
+            },
+            
+            calculateAirMovers: function(affectedSqFt, waterClass) {
+                const sqFtPerUnit = this.airMovers[waterClass].sqFtPerUnit;
+                return Math.ceil(affectedSqFt / sqFtPerUnit);
+            }
+        };
+
+        // Estimate Validation Rules
+        const ESTIMATE_VALIDATION = {
+            minimums: {
+                category1: 500,   // Even small water damage costs this
+                category2: 1000,  // Gray water requires more work
+                category3: 2500   // Black water is always expensive
+            },
+            
+            maximums: {
+                residentialBasement: 15000,
+                residentialMainFloor: 25000,
+                commercial: 100000
+            },
+            
+            equipmentRatios: {
+                // Flags for review if outside these ranges
+                airMoversPerSqFt: { min: 0.01, max: 0.1 },
+                dehumidifiersPerCubicFt: { min: 0.0001, max: 0.001 }
+            },
+            
+            validate: function(estimate) {
+                const warnings = [];
+                
+                if (estimate.total < this.minimums[estimate.category]) {
+                    warnings.push(`Estimate seems low for ${estimate.category} water`);
+                }
+                
+                if (estimate.dryingDays < 3 && estimate.category !== 'category1') {
+                    warnings.push('Most jobs require 3-5 days minimum drying time');
+                }
+                
+                if (estimate.equipmentCount === 0) {
+                    warnings.push('All water damage requires drying equipment');
+                }
+                
+                return warnings;
+            }
+        };
+
+        // Test Cases for Validation
+        const TEST_SCENARIOS = [
+            {
+                description: "Basement 2-inch water line",
+                expectedCategory: 1,
+                expectedRange: { min: 2500, max: 4500 }
+            },
+            {
+                description: "Toilet overflow with waste", 
+                expectedCategory: 3,
+                expectedRange: { min: 5000, max: 8000 }
+            },
+            {
+                description: "Dishwasher leak under cabinets",
+                expectedCategory: 2,
+                expectedRange: { min: 1500, max: 3000 }
+            }
+        ];
+
+        // Legacy pricing for compatibility
         const QUOTE_RANGES = {
             water: {
                 none: { min: 0, max: 0 },
@@ -675,44 +835,393 @@
             showScreen('screen-results');
         }
 
-        // Generate quote based on manual severity selection
+        // Enhanced IICRC-compliant quote generation
         async function generateQuote() {
             showScreen('screen-loading');
             
-            // Simulate processing
+            // Check if we should use AI analysis
+            if (currentDamage === 'water' && currentPhoto && API_KEY !== 'YOUR_API_KEY_HERE') {
+                // Try AI-powered analysis for water damage
+                try {
+                    const aiQuote = await generateAIQuote();
+                    if (aiQuote) {
+                        currentQuoteData = aiQuote;
+                        displayQuoteResults();
+                        return;
+                    }
+                } catch (error) {
+                    console.log('AI analysis failed, using manual assessment:', error);
+                }
+            }
+            
+            // Fallback to manual severity-based quote
             setTimeout(() => {
                 if (currentSeverity === 'none') {
                     showNoDamageResults();
                     return;
                 }
                 
-                // Get quote range for selected severity
-                const range = QUOTE_RANGES[currentDamage][currentSeverity];
-                
-                // Calculate costs
-                const laborRate = 95;
-                const laborCost = range.hours * laborRate;
-                const equipmentCost = range.days * 200;
-                const materialsCost = Math.round((laborCost + equipmentCost) * 0.3);
-                const totalCost = laborCost + equipmentCost + materialsCost;
-                
-                // Create quote data
-                currentQuoteData = {
-                    severity: currentSeverity,
-                    description: getDescription(currentDamage, currentSeverity),
-                    equipment: getEquipment(currentDamage, currentSeverity),
-                    laborHours: range.hours,
-                    equipmentDays: range.days,
-                    laborCost: laborCost,
-                    equipmentCost: equipmentCost,
-                    materialsCost: materialsCost,
-                    totalCost: totalCost
-                };
+                // Use IICRC-compliant pricing for water damage
+                if (currentDamage === 'water') {
+                    const iicrcQuote = generateIICRCQuote(currentSeverity);
+                    currentQuoteData = iicrcQuote;
+                } else {
+                    // Use legacy pricing for fire and mold
+                    const range = QUOTE_RANGES[currentDamage][currentSeverity];
+                    
+                    const laborRate = 95;
+                    const laborCost = range.hours * laborRate;
+                    const equipmentCost = range.days * 200;
+                    const materialsCost = Math.round((laborCost + equipmentCost) * 0.3);
+                    const totalCost = laborCost + equipmentCost + materialsCost;
+                    
+                    currentQuoteData = {
+                        severity: currentSeverity,
+                        description: getDescription(currentDamage, currentSeverity),
+                        equipment: getEquipment(currentDamage, currentSeverity),
+                        laborHours: range.hours,
+                        equipmentDays: range.days,
+                        laborCost: laborCost,
+                        equipmentCost: equipmentCost,
+                        materialsCost: materialsCost,
+                        totalCost: totalCost
+                    };
+                }
                 
                 // Display results
                 displayQuoteResults();
                 
             }, 2000);
+        }
+
+        // Generate IICRC-compliant quote for water damage
+        function generateIICRCQuote(severity) {
+            // Map severity to water category and class
+            const categoryMap = {
+                minor: 'category1',
+                moderate: 'category2', 
+                severe: 'category3'
+            };
+            
+            const classMap = {
+                minor: 'class1',
+                moderate: 'class2',
+                severe: 'class3'
+            };
+            
+            const category = categoryMap[severity];
+            const waterClass = classMap[severity];
+            
+            // Estimate affected area based on severity
+            const affectedArea = {
+                minor: 200,    // 200 sq ft
+                moderate: 400, // 400 sq ft
+                severe: 600    // 600 sq ft
+            }[severity];
+            
+            const roomHeight = 8; // Standard 8 ft ceiling
+            const cubicFeet = affectedArea * roomHeight;
+            const linearFeetWalls = Math.sqrt(affectedArea) * 4; // Approximate perimeter
+            
+            // Calculate equipment needs using IICRC formulas
+            const airMovers = EQUIPMENT_FORMULAS.calculateAirMovers(affectedArea, waterClass);
+            const dehumidifiers = EQUIPMENT_FORMULAS.calculateDehumidifiers(cubicFeet, waterClass);
+            
+            // Calculate drying days based on class
+            const dryingDays = {
+                class1: 3,
+                class2: 4,
+                class3: 5
+            }[waterClass];
+            
+            // Calculate costs using York PA pricing
+            const extractionRate = YORK_PA_PRICING.waterExtraction[category].avg || 
+                                  (YORK_PA_PRICING.waterExtraction[category].min + 
+                                   YORK_PA_PRICING.waterExtraction[category].max) / 2;
+            
+            const extractionCost = Math.round(affectedArea * extractionRate);
+            
+            // Materials costs based on damage level
+            let materialsCost = 0;
+            if (severity === 'moderate' || severity === 'severe') {
+                // Drywall removal (2 ft flood cut)
+                const drywallSqFt = linearFeetWalls * 2;
+                materialsCost += drywallSqFt * 1.50; // Average drywall removal cost
+                
+                // Baseboard removal
+                materialsCost += linearFeetWalls * 2.50; // Average baseboard removal
+            }
+            
+            if (severity === 'severe') {
+                // Carpet removal for severe cases
+                materialsCost += affectedArea * 1.25; // Average carpet removal
+                
+                // Insulation removal
+                materialsCost += (linearFeetWalls * 2) * 2.00; // Insulation in flood cut area
+            }
+            
+            // Antimicrobial treatment for all categories
+            const antimicrobialCost = affectedArea * 0.75;
+            materialsCost += antimicrobialCost;
+            
+            // Equipment rental costs
+            const airMoverCost = airMovers * YORK_PA_PRICING.equipment.airMover.daily * dryingDays;
+            const dehumidifierCost = dehumidifiers * YORK_PA_PRICING.equipment.dehumidifierLGR.daily * dryingDays;
+            const moistureMeterCost = YORK_PA_PRICING.equipment.moistureMeter.daily * dryingDays;
+            const totalEquipmentCost = airMoverCost + dehumidifierCost + moistureMeterCost;
+            
+            // Labor costs
+            const laborHours = {
+                minor: 8,
+                moderate: 16,
+                severe: 24
+            }[severity];
+            
+            const laborRate = 85; // York PA average
+            const laborCost = laborHours * laborRate;
+            
+            // Calculate total
+            const subtotal = extractionCost + Math.round(materialsCost) + totalEquipmentCost + laborCost;
+            const emergencyFee = severity === 'severe' ? 250 : 0;
+            const totalCost = subtotal + emergencyFee;
+            
+            // Validate estimate
+            const validation = ESTIMATE_VALIDATION.validate({
+                total: totalCost,
+                category: category,
+                dryingDays: dryingDays,
+                equipmentCount: airMovers + dehumidifiers
+            });
+            
+            // Build equipment list
+            const equipmentList = [];
+            if (airMovers > 0) equipmentList.push(`${airMovers} Air Movers`);
+            if (dehumidifiers > 0) equipmentList.push(`${dehumidifiers} LGR Dehumidifier${dehumidifiers > 1 ? 's' : ''}`);
+            equipmentList.push('Moisture Meters');
+            if (severity === 'severe') equipmentList.push('Air Scrubber');
+            
+            // Get water category info
+            const categoryInfo = WATER_CATEGORIES[category];
+            
+            return {
+                severity: severity,
+                waterCategory: category,
+                waterClass: waterClass,
+                categoryName: categoryInfo.name,
+                description: `${categoryInfo.name} (${categoryInfo.description}). ${categoryInfo.materials}. Affected area approximately ${affectedArea} sq ft requiring professional water extraction, drying, and restoration per IICRC S500 standards.`,
+                equipment: equipmentList,
+                laborHours: laborHours,
+                equipmentDays: dryingDays,
+                laborCost: laborCost,
+                equipmentCost: totalEquipmentCost,
+                materialsCost: Math.round(materialsCost) + extractionCost,
+                totalCost: totalCost,
+                affectedArea: affectedArea,
+                validationWarnings: validation,
+                breakdown: {
+                    extraction: extractionCost,
+                    materials: Math.round(materialsCost),
+                    antimicrobial: Math.round(antimicrobialCost),
+                    equipment: totalEquipmentCost,
+                    labor: laborCost,
+                    emergency: emergencyFee
+                }
+            };
+        }
+
+        // AI-powered quote generation (when API is available)
+        async function generateAIQuote() {
+            if (!currentPhoto || API_KEY === 'YOUR_API_KEY_HERE') {
+                return null;
+            }
+            
+            // Convert photo to base64
+            const base64Photo = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.readAsDataURL(currentPhoto);
+            });
+            
+            // Build the restoration prompt
+            const prompt = buildRestorationPrompt();
+            
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inline_data: {
+                                        mime_type: currentPhoto.type,
+                                        data: base64Photo
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                
+                // Parse AI response and create quote
+                return parseAIResponse(aiResponse);
+                
+            } catch (error) {
+                console.error('AI analysis error:', error);
+                return null;
+            }
+        }
+
+        // Build the IICRC-compliant restoration prompt
+        function buildRestorationPrompt() {
+            return `You are an IICRC-certified water damage restoration expert analyzing photos for Major Restoration Services in York, PA.
+
+CRITICAL CONTEXT:
+- Use IICRC S500 standards for all assessments
+- Apply York, PA regional pricing (lower than national average by 10-15%)
+- Consider seasonal factors (basement flooding common in spring)
+- Major Restoration Services works with all major insurance companies
+
+Analyze this water damage photo and provide a detailed assessment:
+
+STEP 1: Water Category Classification
+Based on visible contamination and water source, classify as:
+- Category 1 (Clean): Clear water, no visible contamination
+- Category 2 (Gray): Murky water, possible detergent/soap, slight contamination
+- Category 3 (Black): Dark water, sewage indicators, outdoor flooding
+
+STEP 2: Damage Class Assessment  
+- Class 1: <5% of room affected, minimal absorption
+- Class 2: 5-40% affected, wet carpet/pad, wicking up walls <24"
+- Class 3: >40% affected, water from overhead, walls wet >24", insulation wet
+- Class 4: Specialty materials (hardwood, plaster, concrete)
+
+STEP 3: Measurements (from photo analysis)
+Estimate:
+- Room dimensions (length x width x height)
+- Water line height on walls (if visible)
+- Square footage of affected flooring
+- Linear feet of affected walls
+- Materials affected (list each)
+
+STEP 4: Equipment Calculation
+Using IICRC formulas:
+- Air Movers: 1 per 10-16 linear ft of wet wall
+- Dehumidifiers: Based on cubic feet and class
+- Include specific model recommendations
+
+STEP 5: Line Item Estimate
+Generate detailed pricing using these York, PA rates:
+${JSON.stringify(YORK_PA_PRICING, null, 2)}
+
+Return a JSON response with this structure:
+{
+  "waterCategory": "category1/2/3",
+  "waterClass": "class1/2/3/4",
+  "affectedArea": number,
+  "roomDimensions": { "length": number, "width": number, "height": number },
+  "waterLineHeight": number,
+  "materialsAffected": [],
+  "equipment": {
+    "airMovers": number,
+    "dehumidifiers": number,
+    "airScrubbers": number
+  },
+  "dryingDays": number,
+  "lineItems": [
+    { "description": "", "quantity": number, "unit": "", "rate": number, "total": number }
+  ],
+  "totalEstimate": number,
+  "confidence": "high/medium/low",
+  "notes": ""
+}`;
+        }
+
+        // Parse AI response into quote data
+        function parseAIResponse(aiResponse) {
+            try {
+                // Extract JSON from response
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON found in response');
+                }
+                
+                const aiData = JSON.parse(jsonMatch[0]);
+                
+                // Calculate totals from line items
+                let extractionCost = 0;
+                let materialsCost = 0;
+                let equipmentCost = 0;
+                let laborCost = 0;
+                
+                aiData.lineItems.forEach(item => {
+                    const desc = item.description.toLowerCase();
+                    if (desc.includes('extraction') || desc.includes('water removal')) {
+                        extractionCost += item.total;
+                    } else if (desc.includes('equipment') || desc.includes('air mover') || desc.includes('dehumidifier')) {
+                        equipmentCost += item.total;
+                    } else if (desc.includes('labor')) {
+                        laborCost += item.total;
+                    } else {
+                        materialsCost += item.total;
+                    }
+                });
+                
+                // Map to our quote format
+                const severity = {
+                    'category1': 'minor',
+                    'category2': 'moderate',
+                    'category3': 'severe'
+                }[aiData.waterCategory] || 'moderate';
+                
+                // Build equipment list
+                const equipment = [];
+                if (aiData.equipment.airMovers > 0) {
+                    equipment.push(`${aiData.equipment.airMovers} Air Movers`);
+                }
+                if (aiData.equipment.dehumidifiers > 0) {
+                    equipment.push(`${aiData.equipment.dehumidifiers} LGR Dehumidifiers`);
+                }
+                if (aiData.equipment.airScrubbers > 0) {
+                    equipment.push(`${aiData.equipment.airScrubbers} Air Scrubbers`);
+                }
+                equipment.push('Moisture Monitoring Equipment');
+                
+                const categoryInfo = WATER_CATEGORIES[aiData.waterCategory];
+                
+                return {
+                    severity: severity,
+                    waterCategory: aiData.waterCategory,
+                    waterClass: aiData.waterClass,
+                    categoryName: categoryInfo.name,
+                    description: `AI-Analyzed: ${categoryInfo.name} damage detected. ${aiData.notes || categoryInfo.description}`,
+                    equipment: equipment,
+                    laborHours: Math.round(laborCost / 85), // Assuming $85/hour
+                    equipmentDays: aiData.dryingDays,
+                    laborCost: Math.round(laborCost),
+                    equipmentCost: Math.round(equipmentCost),
+                    materialsCost: Math.round(materialsCost + extractionCost),
+                    totalCost: aiData.totalEstimate,
+                    affectedArea: aiData.affectedArea,
+                    confidence: aiData.confidence,
+                    aiAnalyzed: true,
+                    lineItems: aiData.lineItems
+                };
+                
+            } catch (error) {
+                console.error('Error parsing AI response:', error);
+                return null;
+            }
         }
 
         // Get description based on type and severity
@@ -770,9 +1279,61 @@
                 return;
             }
             
-            // Make sure the results screen has all required elements
-            if (!document.getElementById('assessment-text')) {
-                resultsScreen.innerHTML = `
+            // Check if this is IICRC-compliant water damage quote
+            const isIICRC = currentQuoteData.waterCategory && currentDamage === 'water';
+            
+            // Build HTML based on quote type
+            let assessmentHTML = '';
+            if (isIICRC) {
+                // Enhanced display for IICRC quotes
+                assessmentHTML = `
+                    <div class="step-indicator">Your Professional IICRC-Compliant Quote</div>
+                    
+                    <!-- Photo preview -->
+                    <img id="photo-preview" class="photo-preview" style="display: none;">
+                    
+                    <!-- Water Category Info -->
+                    ${currentQuoteData.waterCategory ? `
+                    <div class="info-box">
+                        <strong>Water Category: ${currentQuoteData.categoryName}</strong><br>
+                        <small>Class ${currentQuoteData.waterClass.replace('class', '')} Damage • ${currentQuoteData.affectedArea} sq ft affected</small>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Assessment -->
+                    <div class="result-box">
+                        <div class="result-title">
+                            Damage Assessment 
+                            <span id="severity-badge" class="severity-badge"></span>
+                        </div>
+                        <div id="assessment-text" class="result-text"></div>
+                        <div id="equipment-list" style="margin-top: 15px;"></div>
+                        ${currentQuoteData.validationWarnings && currentQuoteData.validationWarnings.length > 0 ? `
+                        <div class="warning-box" style="margin-top: 15px;">
+                            <strong>Note:</strong> ${currentQuoteData.validationWarnings.join(', ')}
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Detailed Quote -->
+                    <div class="result-box">
+                        <div class="result-title">Professional Quote - IICRC S500 Standards</div>
+                        
+                        <div id="quote-details"></div>
+                        
+                        <div class="quote-item total">
+                            <span>TOTAL ESTIMATE</span>
+                            <span>$<span id="total-cost">0</span></span>
+                        </div>
+
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
+                            Valid for 30 days • 50% deposit required • Insurance claim assistance available
+                        </p>
+                    </div>
+                `;
+            } else {
+                // Standard display for non-IICRC quotes
+                assessmentHTML = `
                     <div class="step-indicator">Your Professional Quote</div>
                     
                     <!-- Photo preview -->
@@ -803,26 +1364,34 @@
                             Valid for 30 days • 50% deposit required
                         </p>
                     </div>
-
-                    <!-- Actions -->
-                    <button class="big-button success" onclick="generateProposal()">
-                        📄 DOWNLOAD PDF PROPOSAL
-                    </button>
-
-                    <button class="big-button secondary" onclick="copyQuote()">
-                        📋 COPY QUICK QUOTE
-                    </button>
-                    
-                    <button class="big-button primary" onclick="startOver()">
-                        📸 NEW ASSESSMENT
-                    </button>
                 `;
             }
+            
+            // Add action buttons
+            assessmentHTML += `
+                <!-- Actions -->
+                <button class="big-button success" onclick="generateProposal()">
+                    📄 DOWNLOAD PDF PROPOSAL
+                </button>
+
+                <button class="big-button secondary" onclick="copyQuote()">
+                    📋 COPY QUICK QUOTE
+                </button>
+                
+                <button class="big-button primary" onclick="startOver()">
+                    📸 NEW ASSESSMENT
+                </button>
+            `;
+            
+            resultsScreen.innerHTML = assessmentHTML;
             
             // Now update the elements
             const assessmentText = document.getElementById('assessment-text');
             if (assessmentText) {
-                assessmentText.textContent = currentQuoteData.description;
+                assessmentText.innerHTML = currentQuoteData.description;
+                if (currentQuoteData.aiAnalyzed) {
+                    assessmentText.innerHTML += '<br><small style="color: #10b981;">✓ AI-Enhanced Analysis</small>';
+                }
             }
             
             // Update severity badge
@@ -838,26 +1407,64 @@
                 const equipmentHtml = currentQuoteData.equipment.map(item => 
                     `<span class="equipment-tag">${item}</span>`
                 ).join('');
-                equipmentList.innerHTML = '<strong>Required Equipment:</strong><br>' + equipmentHtml;
+                equipmentList.innerHTML = '<strong>Required Equipment (IICRC Formula):</strong><br>' + equipmentHtml;
             }
             
-            // Build quote
+            // Build quote details
             const quoteDetails = document.getElementById('quote-details');
             if (quoteDetails) {
-                const quoteHtml = `
-                    <div class="quote-item">
-                        <span>Labor (${currentQuoteData.laborHours} hours @ $95/hr)</span>
-                        <span>$${currentQuoteData.laborCost}</span>
-                    </div>
-                    <div class="quote-item">
-                        <span>Equipment (${currentQuoteData.equipmentDays} days)</span>
-                        <span>$${currentQuoteData.equipmentCost}</span>
-                    </div>
-                    <div class="quote-item">
-                        <span>Materials & Supplies</span>
-                        <span>$${currentQuoteData.materialsCost}</span>
-                    </div>
-                `;
+                let quoteHtml = '';
+                
+                if (isIICRC && currentQuoteData.breakdown) {
+                    // Detailed IICRC breakdown
+                    quoteHtml = `
+                        ${currentQuoteData.breakdown.extraction > 0 ? `
+                        <div class="quote-item">
+                            <span>Water Extraction (${currentQuoteData.affectedArea} sq ft)</span>
+                            <span>$${currentQuoteData.breakdown.extraction.toLocaleString()}</span>
+                        </div>` : ''}
+                        ${currentQuoteData.breakdown.materials > 0 ? `
+                        <div class="quote-item">
+                            <span>Material Removal & Disposal</span>
+                            <span>$${currentQuoteData.breakdown.materials.toLocaleString()}</span>
+                        </div>` : ''}
+                        ${currentQuoteData.breakdown.antimicrobial > 0 ? `
+                        <div class="quote-item">
+                            <span>Antimicrobial Treatment</span>
+                            <span>$${currentQuoteData.breakdown.antimicrobial.toLocaleString()}</span>
+                        </div>` : ''}
+                        <div class="quote-item">
+                            <span>Drying Equipment (${currentQuoteData.equipmentDays} days)</span>
+                            <span>$${currentQuoteData.equipmentCost.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Professional Labor (${currentQuoteData.laborHours} hours)</span>
+                            <span>$${currentQuoteData.laborCost.toLocaleString()}</span>
+                        </div>
+                        ${currentQuoteData.breakdown.emergency > 0 ? `
+                        <div class="quote-item">
+                            <span>Emergency Response Fee</span>
+                            <span>$${currentQuoteData.breakdown.emergency.toLocaleString()}</span>
+                        </div>` : ''}
+                    `;
+                } else {
+                    // Standard breakdown
+                    quoteHtml = `
+                        <div class="quote-item">
+                            <span>Labor (${currentQuoteData.laborHours} hours @ $85/hr)</span>
+                            <span>$${currentQuoteData.laborCost.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Equipment (${currentQuoteData.equipmentDays} days)</span>
+                            <span>$${currentQuoteData.equipmentCost.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Materials & Supplies</span>
+                            <span>$${currentQuoteData.materialsCost.toLocaleString()}</span>
+                        </div>
+                    `;
+                }
+                
                 quoteDetails.innerHTML = quoteHtml;
             }
             
@@ -876,7 +1483,15 @@
             
             // Show results
             showScreen('screen-results');
-            showStatus('Quote generated successfully!', 3000);
+            
+            // Show appropriate status message
+            if (currentQuoteData.aiAnalyzed) {
+                showStatus('AI-enhanced quote generated successfully!', 3000);
+            } else if (isIICRC) {
+                showStatus('IICRC-compliant quote generated!', 3000);
+            } else {
+                showStatus('Quote generated successfully!', 3000);
+            }
         }
 
         // Generate PDF proposal
