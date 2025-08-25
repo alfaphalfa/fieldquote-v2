@@ -1310,10 +1310,19 @@
             showScreen('screen-loading');
             
             // Check if we should use AI analysis
-            if (currentDamage === 'water' && currentPhoto && API_KEY !== 'YOUR_API_KEY_HERE') {
-                // Try AI-powered analysis for water damage
+            if (currentPhoto && API_KEY !== 'YOUR_API_KEY_HERE' && API_KEY !== '') {
+                // Try AI-powered analysis based on damage type
                 try {
-                    const aiQuote = await generateAIQuote();
+                    let aiQuote = null;
+                    
+                    if (currentDamage === 'water') {
+                        aiQuote = await generateAIQuote('water');
+                    } else if (currentDamage === 'fire') {
+                        aiQuote = await generateAIQuote('fire');
+                    } else if (currentDamage === 'mold') {
+                        aiQuote = await generateAIQuote('mold');
+                    }
+                    
                     if (aiQuote) {
                         currentQuoteData = aiQuote;
                         displayQuoteResults();
@@ -1507,9 +1516,9 @@
             };
         }
 
-        // AI-powered quote generation (when API is available)
-        async function generateAIQuote() {
-            if (!currentPhoto || API_KEY === 'YOUR_API_KEY_HERE') {
+        // AI-powered quote generation using Gemini Flash API
+        async function generateAIQuote(damageType) {
+            if (!currentPhoto || API_KEY === 'YOUR_API_KEY_HERE' || API_KEY === '') {
                 return null;
             }
             
@@ -1520,10 +1529,18 @@
                 reader.readAsDataURL(currentPhoto);
             });
             
-            // Build the restoration prompt
-            const prompt = buildRestorationPrompt();
+            // Build the appropriate restoration prompt based on damage type
+            let prompt = '';
+            if (damageType === 'water') {
+                prompt = buildRestorationPrompt();
+            } else if (damageType === 'fire') {
+                prompt = buildFireRestorationPrompt();
+            } else if (damageType === 'mold') {
+                prompt = buildMoldRemediationPrompt();
+            }
             
             try {
+                // Use Gemini Flash API structure
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: {
@@ -1534,28 +1551,68 @@
                             parts: [
                                 { text: prompt },
                                 {
-                                    inline_data: {
-                                        mime_type: currentPhoto.type,
+                                    inlineData: {
+                                        mimeType: currentPhoto.type || 'image/jpeg',
                                         data: base64Photo
                                     }
                                 }
                             ]
-                        }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.2,  // Low temperature for more consistent estimates
+                            topK: 1,
+                            topP: 1,
+                            maxOutputTokens: 2048,
+                        },
+                        safetySettings: [
+                            {
+                                category: "HARM_CATEGORY_HARASSMENT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_HATE_SPEECH",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                threshold: "BLOCK_NONE"
+                            }
+                        ]
                     })
                 });
                 
                 if (!response.ok) {
-                    throw new Error('API request failed');
+                    const errorData = await response.json();
+                    console.error('API Error:', errorData);
+                    throw new Error(`API request failed: ${response.status}`);
                 }
                 
                 const data = await response.json();
+                
+                // Check for API response
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                    console.error('Invalid API response structure:', data);
+                    return null;
+                }
+                
                 const aiResponse = data.candidates[0].content.parts[0].text;
                 
-                // Parse AI response and create quote
-                return parseAIResponse(aiResponse);
+                // Parse AI response based on damage type
+                if (damageType === 'water') {
+                    return parseWaterDamageResponse(aiResponse);
+                } else if (damageType === 'fire') {
+                    return parseFireDamageResponse(aiResponse);
+                } else if (damageType === 'mold') {
+                    return parseMoldDamageResponse(aiResponse);
+                }
                 
             } catch (error) {
                 console.error('AI analysis error:', error);
+                showStatus('AI analysis unavailable, using manual assessment', 3000, 'warning');
                 return null;
             }
         }
@@ -1904,6 +1961,186 @@
             };
         }
 
+        // Parse fire damage AI response
+        function parseFireDamageResponse(aiResponse) {
+            try {
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON found in fire damage response');
+                }
+                
+                const aiData = JSON.parse(jsonMatch[0]);
+                
+                // Map to severity
+                const severity = {
+                    'light': 'minor',
+                    'moderate': 'moderate',
+                    'heavy': 'severe',
+                    'severe': 'severe'
+                }[aiData.damageLevel] || 'moderate';
+                
+                // Get smoke and fire info
+                const smokeType = aiData.smokeType || 'complexSmoke';
+                const fireClass = aiData.fireClass || 'classA';
+                const smoke = SMOKE_TYPES[smokeType] || SMOKE_TYPES.complexSmoke;
+                const fireInfo = FIRE_CLASSIFICATIONS[fireClass] || FIRE_CLASSIFICATIONS.classA;
+                
+                // Calculate totals from AI response
+                let totalCost = aiData.totalEstimate || 0;
+                let laborCost = 0;
+                let equipmentCost = 0;
+                let materialsCost = 0;
+                
+                // Process line items if available
+                if (aiData.lineItems && Array.isArray(aiData.lineItems)) {
+                    aiData.lineItems.forEach(item => {
+                        const desc = item.description.toLowerCase();
+                        if (desc.includes('labor')) {
+                            laborCost += item.total;
+                        } else if (desc.includes('equipment') || desc.includes('scrubber') || desc.includes('hydroxyl')) {
+                            equipmentCost += item.total;
+                        } else {
+                            materialsCost += item.total;
+                        }
+                    });
+                }
+                
+                // Build equipment list
+                const equipment = [];
+                if (aiData.equipment) {
+                    if (aiData.equipment.airScrubbers > 0) {
+                        equipment.push(`${aiData.equipment.airScrubbers} HEPA Air Scrubbers`);
+                    }
+                    if (aiData.equipment.hydroxylGenerators > 0) {
+                        equipment.push(`${aiData.equipment.hydroxylGenerators} Hydroxyl Generators`);
+                    }
+                    if (aiData.equipment.thermalFoggers > 0) {
+                        equipment.push(`${aiData.equipment.thermalFoggers} Thermal Foggers`);
+                    }
+                }
+                equipment.push('HEPA Vacuums', 'PPE Equipment');
+                
+                // Add hazard warnings
+                let warnings = aiData.hazardWarnings || [];
+                if (aiData.affectedArea > 500) {
+                    warnings.push('Large area - environmental testing recommended for pre-1980 buildings');
+                }
+                
+                return {
+                    severity: severity,
+                    smokeType: smokeType,
+                    smokeTypeName: smoke.name,
+                    fireClass: fireClass,
+                    fireClassName: fireInfo.name,
+                    damageLevel: aiData.damageLevel,
+                    description: `AI-Analyzed: ${smoke.name} from ${fireInfo.name}. Affected area: ${aiData.affectedArea || 'Unknown'} sq ft. ${aiData.notes || ''}`,
+                    equipment: equipment,
+                    laborHours: Math.round(laborCost / 95) || 16,
+                    equipmentDays: aiData.treatmentDays || 3,
+                    laborCost: Math.round(laborCost) || 1500,
+                    equipmentCost: Math.round(equipmentCost) || 1000,
+                    materialsCost: Math.round(materialsCost) || 2000,
+                    totalCost: totalCost || 5000,
+                    affectedArea: aiData.affectedArea || 0,
+                    validationWarnings: warnings,
+                    confidence: aiData.confidence || 'medium',
+                    aiAnalyzed: true,
+                    lineItems: aiData.lineItems
+                };
+                
+            } catch (error) {
+                console.error('Error parsing fire damage AI response:', error);
+                return null;
+            }
+        }
+
+        // Parse mold damage AI response
+        function parseMoldDamageResponse(aiResponse) {
+            try {
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON found in mold response');
+                }
+                
+                const aiData = JSON.parse(jsonMatch[0]);
+                
+                // Map condition level to severity
+                const severity = aiData.conditionLevel === 1 ? 'minor' :
+                               aiData.conditionLevel === 2 ? 'moderate' : 'severe';
+                
+                // Determine mold type from likely species
+                let moldType = 'aspergillus'; // Default
+                if (aiData.moldTypesLikely && aiData.moldTypesLikely.length > 0) {
+                    const firstType = aiData.moldTypesLikely[0].toLowerCase();
+                    if (firstType.includes('stachybotrys') || firstType.includes('black')) {
+                        moldType = 'stachybotrys';
+                    } else if (firstType.includes('penicillium')) {
+                        moldType = 'penicillium';
+                    } else if (firstType.includes('cladosporium')) {
+                        moldType = 'cladosporium';
+                    }
+                }
+                
+                const mold = MOLD_TYPES[moldType];
+                
+                // Determine containment level
+                const sqft = aiData.visibleGrowthSqFt || 10;
+                let containmentLevel = 'level1';
+                if (sqft > 100) containmentLevel = 'level4';
+                else if (sqft > 30) containmentLevel = 'level3';
+                else if (sqft > 10) containmentLevel = 'level2';
+                
+                const containment = CONTAINMENT_LEVELS[containmentLevel];
+                
+                // Build equipment list
+                const equipment = aiData.equipmentNeeded || [];
+                if (equipment.length === 0) {
+                    equipment.push('HEPA Air Scrubber', 'Negative Air Machine', 'HEPA Vacuum');
+                    containment.equipment.forEach(item => {
+                        if (!equipment.includes(item)) equipment.push(item);
+                    });
+                }
+                
+                // Process costs
+                const totalCost = aiData.estimatedCost ? 
+                    (aiData.estimatedCost.high + aiData.estimatedCost.low) / 2 : 3000;
+                
+                // Build warnings
+                let warnings = aiData.insuranceNotes || [];
+                warnings.push(MOLD_ESTIMATE_VALIDATION.requirements.moistureSource);
+                if (moldType === 'stachybotrys') {
+                    warnings.push(MOLD_ESTIMATE_VALIDATION.warningFlags.blackMold);
+                }
+                
+                return {
+                    severity: severity,
+                    moldType: moldType,
+                    moldName: mold.name,
+                    containmentLevel: containmentLevel,
+                    containmentDesc: containment.description,
+                    healthRisk: aiData.healthRiskScore || 5,
+                    condition: `condition${aiData.conditionLevel || 3}`,
+                    description: `AI-Analyzed: ${mold.name} detected. ${sqft} sq ft affected. ${aiData.moistureSource || 'Moisture source needs identification'}. ${containment.description} containment required.`,
+                    equipment: equipment,
+                    laborHours: aiData.remediationDays ? aiData.remediationDays * 8 : 8,
+                    equipmentDays: aiData.remediationDays || 2,
+                    laborCost: Math.round((aiData.remediationDays || 1) * 8 * 87.50),
+                    equipmentCost: Math.round((aiData.remediationDays || 2) * 400),
+                    materialsCost: Math.round(totalCost * 0.6),
+                    totalCost: Math.round(totalCost),
+                    affectedArea: sqft,
+                    validationWarnings: warnings,
+                    aiAnalyzed: true,
+                    immediateActions: aiData.immediateActions,
+                    testingRequired: aiData.professionalTestingRequired
+                };
+                
+            } catch (error) {
+                console.error('Error parsing mold AI response:', error);
+                return null;
+            }
+        }
+
         // Build the mold remediation AI prompt
         function buildMoldRemediationPrompt() {
             return `You are an IICRC S520-certified mold assessment specialist analyzing photos for Major Restoration Services in York, PA.
@@ -2111,8 +2348,8 @@ Return a JSON response with this structure:
 }`;
         }
 
-        // Parse AI response into quote data
-        function parseAIResponse(aiResponse) {
+        // Parse water damage AI response into quote data
+        function parseWaterDamageResponse(aiResponse) {
             try {
                 // Extract JSON from response
                 const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
