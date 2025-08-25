@@ -708,6 +708,233 @@
             }
         ];
 
+        // IICRC S700 Fire Damage Standards
+        // Smoke Type Classifications (Critical for Accurate Estimates)
+        const SMOKE_TYPES = {
+            wetSmoke: {
+                name: "Wet Smoke (Plastic/Rubber)",
+                source: "Low-heat, smoldering fires with synthetic materials",
+                characteristics: "Sticky, smeary, pungent odor, difficult to clean",
+                residue: "Thick black film, smoke webs common",
+                cleaningDifficulty: "High",
+                examples: ["Electrical fires", "Plastic furniture", "Rubber materials"],
+                costMultiplier: 1.4
+            },
+            
+            drySmoke: {
+                name: "Dry Smoke (Paper/Wood)",
+                source: "High-temperature, fast-burning natural materials",
+                characteristics: "Powdery, dry residue, easier to clean",
+                residue: "Fine gray/black powder",
+                cleaningDifficulty: "Moderate",
+                examples: ["Fireplace", "Wood structure fire", "Paper products"],
+                costMultiplier: 1.0
+            },
+            
+            proteinSmoke: {
+                name: "Protein Residue",
+                source: "Burned organic matter (food, meat)",
+                characteristics: "Nearly invisible, extreme odor, yellow/brown film",
+                residue: "Greasy, sticky coating",
+                cleaningDifficulty: "Very High",
+                examples: ["Kitchen fires", "Grease fires", "Burnt food"],
+                costMultiplier: 1.5
+            },
+            
+            petroleumSmoke: {
+                name: "Fuel/Oil Smoke",
+                source: "Petroleum products, heating oil",
+                characteristics: "Sticky, dense, offensive odor",
+                residue: "Thick black tar-like substance",
+                cleaningDifficulty: "Extreme",
+                examples: ["Furnace puffback", "Garage fires", "Oil spills"],
+                costMultiplier: 1.6
+            },
+            
+            complexSmoke: {
+                name: "Complex/Mixed",
+                source: "Multiple materials (most common)",
+                characteristics: "Combination of all types",
+                residue: "Varied based on materials",
+                cleaningDifficulty: "High",
+                examples: ["House fires", "Commercial fires"],
+                costMultiplier: 1.3
+            }
+        };
+
+        // Fire Classifications & Damage Levels
+        const FIRE_CLASSIFICATIONS = {
+            classA: {
+                name: "Class A - Ordinary Combustibles",
+                materials: ["Wood", "Paper", "Cloth", "Trash"],
+                typicalCost: { min: 8000, max: 14000 },
+                perSqFt: { min: 3.50, max: 5.50 }
+            },
+            
+            classB: {
+                name: "Class B - Flammable Liquids",
+                materials: ["Gasoline", "Oil", "Paint", "Solvents"],
+                typicalCost: { min: 12000, max: 20000 },
+                perSqFt: { min: 5.00, max: 8.00 }
+            },
+            
+            classC: {
+                name: "Class C - Electrical",
+                materials: ["Appliances", "Wiring", "Circuit breakers"],
+                typicalCost: { min: 10000, max: 18000 },
+                perSqFt: { min: 4.50, max: 7.50 }
+            },
+            
+            classK: {
+                name: "Class K - Kitchen/Grease",
+                materials: ["Cooking oils", "Fats", "Grease"],
+                typicalCost: { min: 11000, max: 18000 },
+                perSqFt: { min: 5.00, max: 8.50 }
+            }
+        };
+
+        const DAMAGE_SEVERITY = {
+            light: {
+                description: "Surface soot, minor smoke odor",
+                structuralDamage: false,
+                contentsCleaning: "Light",
+                costMultiplier: 0.6
+            },
+            moderate: {
+                description: "Heavy soot, penetrating smoke, some charring",
+                structuralDamage: "Minor",
+                contentsCleaning: "Moderate to Heavy",
+                costMultiplier: 1.0
+            },
+            heavy: {
+                description: "Structural damage, heavy soot throughout",
+                structuralDamage: "Significant",
+                contentsCleaning: "Heavy to Total Loss",
+                costMultiplier: 1.5
+            },
+            severe: {
+                description: "Major structural damage, potential total loss",
+                structuralDamage: "Major",
+                contentsCleaning: "Total Loss",
+                costMultiplier: 2.0
+            }
+        };
+
+        // York, PA Fire Restoration Pricing
+        const YORK_PA_FIRE_PRICING = {
+            // Based on Major Restoration Services market research
+            restoration: {
+                smokeOdorRemoval: { min: 200, max: 1200, unit: "room" },
+                sootRemoval: { min: 2.00, max: 6.00, unit: "sq_ft" },
+                structuralCleaning: { min: 3.50, max: 7.00, unit: "sq_ft" },
+                contentsCleaning: { min: 5.00, max: 15.00, unit: "item" },
+                ductCleaning: { min: 250, max: 500, unit: "system" }
+            },
+            
+            specialized: {
+                thermalFogging: { min: 200, max: 600, unit: "room" },
+                ozonetreatment: { min: 175, max: 950, unit: "day" },
+                hydroxylGenerator: { min: 150, max: 400, unit: "day" },
+                airScrubber: { min: 150, max: 250, unit: "day" },
+                hepaVacuuming: { min: 0.50, max: 1.50, unit: "sq_ft" }
+            },
+            
+            structural: {
+                drywallReplacement: { min: 1.50, max: 3.00, unit: "sq_ft" },
+                insulationReplacement: { min: 2.00, max: 4.00, unit: "sq_ft" },
+                framingRepair: { min: 25, max: 75, unit: "linear_ft" },
+                roofingRepair: { min: 250, max: 450, unit: "square" },
+                electricalRepair: { min: 150, max: 500, unit: "hour" }
+            },
+            
+            emergency: {
+                boardUp: { min: 300, max: 1500, unit: "opening" },
+                tarping: { min: 200, max: 1000, unit: "area" },
+                securityFence: { min: 15, max: 25, unit: "linear_ft" },
+                emergencyResponse: { min: 500, max: 1500, unit: "call" }
+            }
+        };
+
+        // Health Hazard Classifications (IICRC S700)
+        const HAZARD_MATERIALS = {
+            toxicChemicals: {
+                PVC: {
+                    source: "Plumbing, flooring, siding",
+                    hazards: ["Hydrogen chloride", "Dioxins", "Phosgene"],
+                    ppe: "Full respirator required"
+                },
+                asbestos: {
+                    source: "Pre-1980 insulation, tiles",
+                    hazards: ["Airborne fibers", "Mesothelioma risk"],
+                    ppe: "Licensed abatement required"
+                },
+                leadPaint: {
+                    source: "Pre-1978 painted surfaces",
+                    hazards: ["Lead dust", "Neurological damage"],
+                    ppe: "RRP certification required"
+                }
+            },
+            
+            respiratoryIrritants: {
+                ammonia: "From wool, silk, nylon",
+                sulfurDioxide: "Present in 50% of smoke",
+                acrolein: "Common combustion irritant",
+                carbonMonoxide: "Deadly, requires monitoring"
+            }
+        };
+
+        // Fire Damage Validation Rules
+        const FIRE_ESTIMATE_VALIDATION = {
+            minimums: {
+                smokeOnly: 1500,      // Even smoke damage costs this
+                minorFire: 3000,      // Small contained fire
+                kitchenFire: 5000,    // Grease fires are expensive
+                structuralFire: 10000 // Any structural damage
+            },
+            
+            warningTriggers: {
+                noOdorTreatment: "All fire damage requires odor treatment",
+                noSootRemoval: "Soot removal is always necessary",
+                quickDrying: "Fire damage typically needs 3-5 days minimum",
+                noContentsHandling: "Contents cleaning/removal always needed",
+                lowProteinFire: "Kitchen fires cost more due to grease"
+            },
+            
+            healthSafetyFlags: {
+                preYear: 1980,
+                materials: ["asbestos", "lead", "pcb"],
+                required: "Environmental testing required before restoration"
+            }
+        };
+
+        // Fire Test Scenarios
+        const FIRE_TEST_SCENARIOS = [
+            {
+                description: "Kitchen grease fire",
+                expectedType: "Class K",
+                expectedSmoke: "Protein",
+                expectedRange: { min: 5000, max: 10000 }
+            },
+            {
+                description: "Electrical panel fire",
+                expectedType: "Class C",
+                expectedSmoke: "Wet smoke",
+                expectedRange: { min: 8000, max: 15000 }
+            },
+            {
+                description: "Bedroom contents fire",
+                expectedType: "Class A",
+                expectedSmoke: "Complex",
+                expectedRange: { min: 4000, max: 8000 }
+            },
+            {
+                description: "Garage petroleum fire",
+                expectedType: "Class B",
+                expectedSmoke: "Petroleum",
+                expectedRange: { min: 10000, max: 20000 }
+            }
+        ];
+
         // Legacy pricing for compatibility
         const QUOTE_RANGES = {
             water: {
@@ -865,8 +1092,12 @@
                 if (currentDamage === 'water') {
                     const iicrcQuote = generateIICRCQuote(currentSeverity);
                     currentQuoteData = iicrcQuote;
+                } else if (currentDamage === 'fire') {
+                    // Use IICRC S700 compliant pricing for fire damage
+                    const s700Quote = generateS700FireQuote(currentSeverity);
+                    currentQuoteData = s700Quote;
                 } else {
-                    // Use legacy pricing for fire and mold
+                    // Use legacy pricing for mold
                     const range = QUOTE_RANGES[currentDamage][currentSeverity];
                     
                     const laborRate = 95;
@@ -1082,6 +1313,248 @@
             }
         }
 
+        // Generate IICRC S700-compliant quote for fire damage
+        function generateS700FireQuote(severity) {
+            // Map severity to smoke type and fire class
+            const smokeTypeMap = {
+                minor: 'drySmoke',
+                moderate: 'complexSmoke',
+                severe: 'wetSmoke'
+            };
+            
+            const fireClassMap = {
+                minor: 'classA',
+                moderate: 'classA',
+                severe: 'classC'
+            };
+            
+            const smokeType = smokeTypeMap[severity];
+            const fireClass = fireClassMap[severity];
+            const damageLevel = severity === 'minor' ? 'light' : 
+                               severity === 'moderate' ? 'moderate' : 'heavy';
+            
+            // Estimate affected area
+            const affectedArea = {
+                minor: 300,    // 300 sq ft
+                moderate: 600, // 600 sq ft
+                severe: 1000   // 1000 sq ft
+            }[severity];
+            
+            const rooms = Math.ceil(affectedArea / 150); // Avg 150 sq ft per room
+            
+            // Get smoke and fire info
+            const smoke = SMOKE_TYPES[smokeType];
+            const fireInfo = FIRE_CLASSIFICATIONS[fireClass];
+            const damage = DAMAGE_SEVERITY[damageLevel];
+            
+            // Calculate costs using York PA pricing
+            
+            // Emergency response
+            const emergencyResponse = severity === 'severe' ? 1000 : 500;
+            
+            // Soot removal
+            const sootRate = (YORK_PA_FIRE_PRICING.restoration.sootRemoval.min + 
+                            YORK_PA_FIRE_PRICING.restoration.sootRemoval.max) / 2;
+            const sootRemovalCost = Math.round(affectedArea * sootRate * smoke.costMultiplier);
+            
+            // Structural cleaning
+            const structuralRate = severity === 'minor' ? 3.50 : 
+                                  severity === 'moderate' ? 5.00 : 6.50;
+            const structuralCost = Math.round(affectedArea * structuralRate);
+            
+            // Odor removal
+            const odorRemovalCost = rooms * 400; // Average per room
+            const thermalFoggingCost = rooms * 300;
+            
+            // Equipment rental
+            const airScrubbers = Math.ceil(affectedArea / 500);
+            const hydroxylGens = severity === 'severe' ? 2 : 1;
+            const daysNeeded = severity === 'minor' ? 3 : 
+                              severity === 'moderate' ? 5 : 7;
+            
+            const airScrubberCost = airScrubbers * 200 * daysNeeded;
+            const hydroxylCost = hydroxylGens * 250 * daysNeeded;
+            const equipmentTotal = airScrubberCost + hydroxylCost;
+            
+            // HEPA vacuuming
+            const hepaRate = 1.00;
+            const hepaCost = Math.round(affectedArea * hepaRate);
+            
+            // Contents handling
+            const itemsAffected = severity === 'minor' ? 20 : 
+                                 severity === 'moderate' ? 50 : 100;
+            const contentsCost = itemsAffected * 10; // Average $10 per item
+            
+            // Duct cleaning
+            const ductCost = severity === 'minor' ? 0 : 375; // Only for moderate/severe
+            
+            // Materials and structural repairs
+            let structuralRepairs = 0;
+            if (severity === 'moderate') {
+                // Some drywall replacement
+                structuralRepairs = 200 * 2.25; // 200 sq ft drywall
+            } else if (severity === 'severe') {
+                // Significant repairs
+                structuralRepairs = 400 * 2.25 + // Drywall
+                                  100 * 3.00;  // Insulation
+            }
+            
+            // Labor
+            const laborHours = {
+                minor: 16,
+                moderate: 32,
+                severe: 48
+            }[severity];
+            
+            const laborRate = 95;
+            const laborCost = laborHours * laborRate;
+            
+            // Calculate totals
+            const materialsCost = sootRemovalCost + structuralCost + hepaCost + 
+                                structuralRepairs + contentsCost;
+            const servicesCost = odorRemovalCost + thermalFoggingCost + ductCost;
+            
+            const subtotal = emergencyResponse + materialsCost + servicesCost + 
+                           equipmentTotal + laborCost;
+            
+            // Apply damage severity multiplier
+            const totalCost = Math.round(subtotal * damage.costMultiplier);
+            
+            // Validate estimate
+            let warnings = [];
+            if (totalCost < FIRE_ESTIMATE_VALIDATION.minimums.minorFire && severity !== 'minor') {
+                warnings.push('Estimate may be low for fire damage');
+            }
+            
+            // Check for hazardous materials (pre-1980 building)
+            const hazardWarning = affectedArea > 500 ? 
+                'Large area - environmental testing recommended for pre-1980 buildings' : null;
+            if (hazardWarning) warnings.push(hazardWarning);
+            
+            // Build equipment list
+            const equipmentList = [
+                `${airScrubbers} HEPA Air Scrubber${airScrubbers > 1 ? 's' : ''}`,
+                `${hydroxylGens} Hydroxyl Generator${hydroxylGens > 1 ? 's' : ''}`,
+                'Thermal Fogger',
+                'HEPA Vacuums',
+                'PPE Equipment'
+            ];
+            
+            if (severity === 'severe') {
+                equipmentList.push('Ozone Generator (unoccupied only)');
+            }
+            
+            return {
+                severity: severity,
+                smokeType: smokeType,
+                smokeTypeName: smoke.name,
+                fireClass: fireClass,
+                fireClassName: fireInfo.name,
+                damageLevel: damageLevel,
+                description: `${smoke.name} damage from ${fireInfo.name.toLowerCase()}. ${damage.description}. ${smoke.characteristics}. Affected area approximately ${affectedArea} sq ft requiring comprehensive soot removal, odor elimination, and restoration per IICRC S700 standards.`,
+                equipment: equipmentList,
+                laborHours: laborHours,
+                equipmentDays: daysNeeded,
+                laborCost: laborCost,
+                equipmentCost: equipmentTotal,
+                materialsCost: materialsCost + servicesCost,
+                totalCost: totalCost,
+                affectedArea: affectedArea,
+                validationWarnings: warnings,
+                breakdown: {
+                    emergency: emergencyResponse,
+                    sootRemoval: sootRemovalCost,
+                    structural: structuralCost,
+                    odorRemoval: odorRemovalCost + thermalFoggingCost,
+                    hepaVacuuming: hepaCost,
+                    contents: contentsCost,
+                    ductCleaning: ductCost,
+                    repairs: structuralRepairs,
+                    equipment: equipmentTotal,
+                    labor: laborCost
+                }
+            };
+        }
+
+        // Build the enhanced fire restoration AI prompt
+        function buildFireRestorationPrompt() {
+            return `You are an IICRC S700-certified fire damage restoration expert analyzing photos for Major Restoration Services in York, PA.
+
+CRITICAL STANDARDS:
+- Follow IICRC S700 (2025) fire and smoke damage restoration standards
+- Apply NFPA fire classifications
+- Consider health hazards per EPA and OSHA guidelines
+- Use York, PA regional pricing (10-15% below national average)
+
+ANALYSIS PROTOCOL:
+
+STEP 1: Fire Classification
+Identify the fire class based on visible burn patterns and materials:
+- Class A: Wood, paper, fabric (most common residential)
+- Class B: Flammable liquids (garage, workshop)
+- Class C: Electrical (appliance, wiring)
+- Class K: Kitchen grease (commercial or residential kitchen)
+
+STEP 2: Smoke Type Assessment
+Determine smoke type from residue appearance:
+- WET SMOKE: Sticky black film, smoke webs = plastic/rubber burned
+- DRY SMOKE: Powdery gray/black = wood/paper burned
+- PROTEIN: Yellow/brown film, strong odor = food/organic matter
+- PETROLEUM: Thick black tar = oil/fuel products
+- COMPLEX: Mixed characteristics = typical house fire
+
+STEP 3: Damage Severity Level
+- LIGHT: Surface soot only, cleanable
+- MODERATE: Penetrating soot, minor charring
+- HEAVY: Structural damage visible, extensive soot
+- SEVERE: Major structural compromise
+
+STEP 4: Affected Areas & Materials
+From the photo, identify:
+- Room dimensions and square footage
+- Char depth on structural members
+- Soot coverage percentage
+- Water damage from suppression
+- Contents visible (salvageable vs total loss)
+- HVAC contamination risk
+
+STEP 5: Equipment & Treatment Needs
+Based on smoke type and severity:
+- Air scrubbers: 1 per 500 sq ft affected
+- Hydroxyl generators: For occupied structures
+- Ozone generators: For unoccupied only
+- Thermal foggers: 1 per floor for odor
+- HEPA vacuums: All soot removal
+
+STEP 6: Line Item Estimate Generation
+Using York, PA rates:
+${JSON.stringify(YORK_PA_FIRE_PRICING, null, 2)}
+
+Return JSON with complete assessment:
+{
+  "fireClass": "classA/B/C/K",
+  "smokeType": "wet/dry/protein/petroleum/complex",
+  "damageLevel": "light/moderate/heavy/severe",
+  "affectedArea": number,
+  "roomCount": number,
+  "charDepth": number,
+  "sootCoverage": number,
+  "waterDamage": boolean,
+  "contentsLoss": "percentage",
+  "hvacContaminated": boolean,
+  "equipment": {
+    "airScrubbers": number,
+    "hydroxylGenerators": number,
+    "thermalFoggers": number
+  },
+  "treatmentDays": number,
+  "lineItems": [],
+  "totalEstimate": number,
+  "hazardWarnings": [],
+  "confidence": "high/medium/low"
+}`;
+        }
+
         // Build the IICRC-compliant restoration prompt
         function buildRestorationPrompt() {
             return `You are an IICRC-certified water damage restoration expert analyzing photos for Major Restoration Services in York, PA.
@@ -1281,11 +1754,13 @@ Return a JSON response with this structure:
             
             // Check if this is IICRC-compliant water damage quote
             const isIICRC = currentQuoteData.waterCategory && currentDamage === 'water';
+            // Check if this is S700-compliant fire damage quote
+            const isS700 = currentQuoteData.smokeType && currentDamage === 'fire';
             
             // Build HTML based on quote type
             let assessmentHTML = '';
             if (isIICRC) {
-                // Enhanced display for IICRC quotes
+                // Enhanced display for IICRC water damage quotes
                 assessmentHTML = `
                     <div class="step-indicator">Your Professional IICRC-Compliant Quote</div>
                     
@@ -1328,6 +1803,52 @@ Return a JSON response with this structure:
 
                         <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
                             Valid for 30 days • 50% deposit required • Insurance claim assistance available
+                        </p>
+                    </div>
+                `;
+            } else if (isS700) {
+                // Enhanced display for IICRC S700 fire damage quotes
+                assessmentHTML = `
+                    <div class="step-indicator">Your Professional IICRC S700-Compliant Fire Restoration Quote</div>
+                    
+                    <!-- Photo preview -->
+                    <img id="photo-preview" class="photo-preview" style="display: none;">
+                    
+                    <!-- Fire/Smoke Classification -->
+                    <div class="warning-box">
+                        <strong>${currentQuoteData.fireClassName}</strong><br>
+                        <strong>Smoke Type: ${currentQuoteData.smokeTypeName}</strong><br>
+                        <small>${currentQuoteData.affectedArea} sq ft affected • ${currentQuoteData.equipmentDays} day restoration</small>
+                    </div>
+                    
+                    <!-- Assessment -->
+                    <div class="result-box">
+                        <div class="result-title">
+                            Fire Damage Assessment 
+                            <span id="severity-badge" class="severity-badge"></span>
+                        </div>
+                        <div id="assessment-text" class="result-text"></div>
+                        <div id="equipment-list" style="margin-top: 15px;"></div>
+                        ${currentQuoteData.validationWarnings && currentQuoteData.validationWarnings.length > 0 ? `
+                        <div class="warning-box" style="margin-top: 15px;">
+                            <strong>⚠️ Safety Notice:</strong> ${currentQuoteData.validationWarnings.join(', ')}
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Detailed Quote -->
+                    <div class="result-box">
+                        <div class="result-title">Professional Quote - IICRC S700 Standards</div>
+                        
+                        <div id="quote-details"></div>
+                        
+                        <div class="quote-item total">
+                            <span>TOTAL ESTIMATE</span>
+                            <span>$<span id="total-cost">0</span></span>
+                        </div>
+
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
+                            Valid for 30 days • Insurance claim assistance • 24/7 Emergency Response
                         </p>
                     </div>
                 `;
@@ -1415,7 +1936,54 @@ Return a JSON response with this structure:
             if (quoteDetails) {
                 let quoteHtml = '';
                 
-                if (isIICRC && currentQuoteData.breakdown) {
+                if (isS700 && currentQuoteData.breakdown) {
+                    // Detailed S700 fire damage breakdown
+                    quoteHtml = `
+                        <div class="quote-item">
+                            <span>Emergency Response</span>
+                            <span>$${currentQuoteData.breakdown.emergency.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Soot Removal (${currentQuoteData.affectedArea} sq ft)</span>
+                            <span>$${currentQuoteData.breakdown.sootRemoval.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Structural Cleaning</span>
+                            <span>$${currentQuoteData.breakdown.structural.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Odor Removal & Thermal Fogging</span>
+                            <span>$${currentQuoteData.breakdown.odorRemoval.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>HEPA Vacuuming</span>
+                            <span>$${currentQuoteData.breakdown.hepaVacuuming.toLocaleString()}</span>
+                        </div>
+                        ${currentQuoteData.breakdown.contents > 0 ? `
+                        <div class="quote-item">
+                            <span>Contents Cleaning/Pack-out</span>
+                            <span>$${currentQuoteData.breakdown.contents.toLocaleString()}</span>
+                        </div>` : ''}
+                        ${currentQuoteData.breakdown.ductCleaning > 0 ? `
+                        <div class="quote-item">
+                            <span>HVAC Duct Cleaning</span>
+                            <span>$${currentQuoteData.breakdown.ductCleaning.toLocaleString()}</span>
+                        </div>` : ''}
+                        ${currentQuoteData.breakdown.repairs > 0 ? `
+                        <div class="quote-item">
+                            <span>Structural Repairs</span>
+                            <span>$${currentQuoteData.breakdown.repairs.toLocaleString()}</span>
+                        </div>` : ''}
+                        <div class="quote-item">
+                            <span>Equipment Rental (${currentQuoteData.equipmentDays} days)</span>
+                            <span>$${currentQuoteData.breakdown.equipment.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Professional Labor (${currentQuoteData.laborHours} hours)</span>
+                            <span>$${currentQuoteData.breakdown.labor.toLocaleString()}</span>
+                        </div>
+                    `;
+                } else if (isIICRC && currentQuoteData.breakdown) {
                     // Detailed IICRC breakdown
                     quoteHtml = `
                         ${currentQuoteData.breakdown.extraction > 0 ? `
