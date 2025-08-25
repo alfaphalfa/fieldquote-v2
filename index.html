@@ -935,6 +935,249 @@
             }
         ];
 
+        // IICRC S520 Mold Remediation Standards
+        // Mold Condition Classifications
+        const MOLD_CONDITIONS = {
+            condition1: {
+                name: "Normal Fungal Ecology",
+                description: "Background levels of mold spores typical of region and season",
+                action: "No remediation required",
+                indicators: "No visible growth, no musty odors, normal spore counts"
+            },
+            condition2: {
+                name: "Settled Spores",
+                description: "Elevated settled spores from nearby growth, no actual growth present",
+                action: "HEPA vacuum and damp wipe surfaces",
+                indicators: "Dusty surfaces, possible musty odor, no visible growth"
+            },
+            condition3: {
+                name: "Active Mold Growth",
+                description: "Actual fungal growth on surfaces requiring remediation",
+                action: "Full remediation protocol required",
+                indicators: "Visible mold colonies, strong musty odor, moisture present"
+            }
+        };
+
+        // Common Mold Types and Characteristics
+        const MOLD_TYPES = {
+            stachybotrys: {
+                name: "Stachybotrys chartarum (Black Mold)",
+                appearance: "Dark green to black, slimy when wet",
+                health: "Toxigenic - produces mycotoxins",
+                moisture: "Requires chronic moisture (7-12 days continuous)",
+                materials: ["Drywall", "Ceiling tiles", "Paper", "Fiberboard"],
+                riskLevel: 10
+            },
+            aspergillus: {
+                name: "Aspergillus",
+                appearance: "Green, gray, or white, powdery texture",
+                health: "Allergenic, some species toxigenic",
+                moisture: "Moderate moisture requirement",
+                materials: ["Drywall", "Insulation", "Fabric", "Leather"],
+                riskLevel: 7
+            },
+            penicillium: {
+                name: "Penicillium",
+                appearance: "Blue-green to yellow-green, velvety texture",
+                health: "Allergenic, some produce mycotoxins",
+                moisture: "Moderate to high moisture",
+                materials: ["Carpet", "Wallpaper", "Insulation", "Furniture"],
+                riskLevel: 6
+            },
+            cladosporium: {
+                name: "Cladosporium",
+                appearance: "Olive-green to brown or black, suede-like",
+                health: "Allergenic, triggers asthma",
+                moisture: "Can grow in low moisture",
+                materials: ["Wood", "Textiles", "HVAC systems", "Paint"],
+                riskLevel: 5
+            },
+            alternaria: {
+                name: "Alternaria",
+                appearance: "Dark green to brown, velvety texture",
+                health: "Major allergen, asthma trigger",
+                moisture: "Moderate moisture requirement",
+                materials: ["Damp areas", "Showers", "Window frames", "Sinks"],
+                riskLevel: 6
+            },
+            chaetomium: {
+                name: "Chaetomium",
+                appearance: "White initially, changes to gray to black",
+                health: "Allergenic, some toxigenic strains",
+                moisture: "High moisture requirement",
+                materials: ["Drywall", "Wallpaper", "Carpet", "Window frames"],
+                riskLevel: 7
+            },
+            fusarium: {
+                name: "Fusarium",
+                appearance: "Pink, white, or red coloration",
+                health: "Toxigenic, can cause infections",
+                moisture: "Very wet conditions",
+                materials: ["Carpet", "Wallpaper", "Fabric", "Food"],
+                riskLevel: 8
+            }
+        };
+
+        // Containment Level Requirements (IICRC S520)
+        const CONTAINMENT_LEVELS = {
+            level1: {
+                area: "<10 sq ft",
+                description: "Small isolated areas",
+                containment: "Minimal - can use plastic sheeting",
+                equipment: ["N95 respirator", "Gloves", "Goggles"],
+                workers: 1,
+                timeframe: "2-4 hours"
+            },
+            level2: {
+                area: "10-30 sq ft",
+                description: "Mid-sized areas",
+                containment: "Plastic sheeting with slit entry",
+                equipment: ["N95 respirator", "Gloves", "Goggles", "Disposable coveralls"],
+                workers: 1,
+                timeframe: "1 day"
+            },
+            level3: {
+                area: "30-100 sq ft",
+                description: "Large isolated areas",
+                containment: "Full containment with airlock",
+                equipment: ["P100 respirator", "Full PPE", "HEPA vacuum", "Negative air"],
+                workers: 2,
+                timeframe: "2-3 days"
+            },
+            level4: {
+                area: ">100 sq ft",
+                description: "Extensive contamination",
+                containment: "Full containment, negative pressure, decontamination chamber",
+                equipment: ["P100 respirator", "Full PPE", "Multiple HEPA units", "Negative air machines"],
+                workers: "3+",
+                timeframe: "3-7 days"
+            },
+            level5: {
+                area: "HVAC systems",
+                description: "Air handling contamination",
+                containment: "Full building containment may be required",
+                equipment: ["Full PPE", "Specialized HVAC cleaning equipment"],
+                workers: "Specialized crew",
+                timeframe: "Varies"
+            }
+        };
+
+        // York, PA Mold Remediation Pricing
+        const YORK_PA_MOLD_PRICING = {
+            // Based on regional market rates for 2024
+            assessment: {
+                visualInspection: { min: 200, max: 500, unit: "visit" },
+                moistureMapping: { min: 150, max: 300, unit: "visit" },
+                airSampling: { min: 300, max: 500, unit: "sample" },
+                surfaceSampling: { min: 150, max: 250, unit: "sample" },
+                postRemediationVerification: { min: 500, max: 1000, unit: "visit" }
+            },
+            
+            remediation: {
+                surfaceCleaning: { min: 10, max: 15, unit: "sq_ft" },
+                materialRemoval: { min: 15, max: 30, unit: "sq_ft" },
+                hepaVacuuming: { min: 2, max: 4, unit: "sq_ft" },
+                antimicrobialApplication: { min: 1.50, max: 3.00, unit: "sq_ft" },
+                encapsulation: { min: 2.50, max: 5.00, unit: "sq_ft" }
+            },
+            
+            containment: {
+                level1Setup: { min: 200, max: 500, unit: "area" },
+                level2Setup: { min: 500, max: 1000, unit: "area" },
+                level3Setup: { min: 1000, max: 2000, unit: "area" },
+                level4Setup: { min: 2000, max: 5000, unit: "area" },
+                negativeAir: { min: 150, max: 250, unit: "day" }
+            },
+            
+            equipment: {
+                hepaAirScrubber: { min: 150, max: 250, unit: "day" },
+                negativeAirMachine: { min: 175, max: 275, unit: "day" },
+                dehumidifier: { min: 85, max: 125, unit: "day" },
+                moistureMeter: { min: 50, max: 100, unit: "day" },
+                hepaVacuum: { min: 75, max: 125, unit: "day" }
+            },
+            
+            disposal: {
+                baggedWaste: { min: 50, max: 100, unit: "bag" },
+                dumpster: { min: 300, max: 600, unit: "day" },
+                hazardousDisposal: { min: 1.50, max: 3.00, unit: "pound" }
+            },
+            
+            labor: {
+                technician: { min: 75, max: 100, unit: "hour" },
+                supervisor: { min: 100, max: 150, unit: "hour" },
+                industrialHygienist: { min: 150, max: 300, unit: "hour" }
+            }
+        };
+
+        // Mold Health Risk Matrix
+        const MOLD_HEALTH_RISKS = {
+            factors: {
+                moldType: {
+                    toxigenic: 3,      // Black mold, fusarium
+                    allergenic: 2,     // Most common molds
+                    pathogenic: 3      // Can cause infections
+                },
+                location: {
+                    bedroom: 3,        // High exposure time
+                    livingRoom: 3,     // High exposure time
+                    kitchen: 2,        // Moderate exposure
+                    bathroom: 2,       // Expected area
+                    basement: 1,       // Lower exposure
+                    attic: 1          // Minimal exposure
+                },
+                occupants: {
+                    infants: 3,        // High vulnerability
+                    elderly: 3,        // High vulnerability
+                    immunocompromised: 3, // High vulnerability
+                    asthmatic: 3,      // High vulnerability
+                    healthy: 1         // Lower risk
+                },
+                size: {
+                    small: 1,          // <10 sq ft
+                    medium: 2,         // 10-30 sq ft
+                    large: 3,          // 30-100 sq ft
+                    extensive: 4       // >100 sq ft
+                }
+            },
+            
+            calculateRisk: function(type, location, occupants, size) {
+                const typeScore = this.factors.moldType[type] || 2;
+                const locationScore = this.factors.location[location] || 2;
+                const occupantScore = Math.max(...occupants.map(o => this.factors.occupants[o] || 1));
+                const sizeScore = this.factors.size[size] || 2;
+                
+                // Calculate weighted average (occupant health weighs more)
+                const riskScore = (typeScore * 2 + locationScore + occupantScore * 3 + sizeScore) / 7;
+                return Math.round(riskScore * 3.33); // Scale to 1-10
+            }
+        };
+
+        // Mold Remediation Validation
+        const MOLD_ESTIMATE_VALIDATION = {
+            minimums: {
+                smallArea: 500,       // Minimum for any mold job
+                mediumArea: 1500,     // 10-30 sq ft minimum
+                largeArea: 3500,      // 30-100 sq ft minimum
+                extensiveArea: 7000   // >100 sq ft minimum
+            },
+            
+            requirements: {
+                containmentAlways: "All mold remediation requires containment",
+                testingRecommended: "Post-remediation verification recommended",
+                moistureSource: "Must identify and fix moisture source",
+                ppeRequired: "Proper PPE is mandatory for all mold work",
+                noBlendingAllowed: "Never mix bleach with other chemicals"
+            },
+            
+            warningFlags: {
+                blackMold: "Stachybotrys requires special handling protocols",
+                hvacSystem: "HVAC contamination requires specialized cleaning",
+                largeCoverage: "Areas >100 sq ft may require licensed remediator",
+                hiddenMold: "Visible mold often indicates larger hidden problem"
+            }
+        };
+
         // Legacy pricing for compatibility
         const QUOTE_RANGES = {
             water: {
@@ -1096,8 +1339,12 @@
                     // Use IICRC S700 compliant pricing for fire damage
                     const s700Quote = generateS700FireQuote(currentSeverity);
                     currentQuoteData = s700Quote;
+                } else if (currentDamage === 'mold') {
+                    // Use IICRC S520 compliant pricing for mold remediation
+                    const s520Quote = generateS520MoldQuote(currentSeverity);
+                    currentQuoteData = s520Quote;
                 } else {
-                    // Use legacy pricing for mold
+                    // Fallback for any other damage types
                     const range = QUOTE_RANGES[currentDamage][currentSeverity];
                     
                     const laborRate = 95;
@@ -1476,6 +1723,250 @@
             };
         }
 
+        // Generate IICRC S520-compliant quote for mold remediation
+        function generateS520MoldQuote(severity) {
+            // Map severity to containment level and area
+            const containmentMap = {
+                minor: 'level1',
+                moderate: 'level2',
+                severe: 'level3'
+            };
+            
+            const areaMap = {
+                minor: 8,      // 8 sq ft
+                moderate: 20,  // 20 sq ft
+                severe: 75     // 75 sq ft
+            };
+            
+            const containmentLevel = containmentMap[severity];
+            const affectedArea = areaMap[severity];
+            const containment = CONTAINMENT_LEVELS[containmentLevel];
+            
+            // Determine likely mold type based on severity
+            const moldType = severity === 'severe' ? 'stachybotrys' : 
+                           severity === 'moderate' ? 'aspergillus' : 'cladosporium';
+            const mold = MOLD_TYPES[moldType];
+            
+            // Calculate health risk
+            const location = 'livingRoom'; // Assume worst case
+            const occupants = ['healthy']; // Default
+            const sizeCategory = severity === 'minor' ? 'small' : 
+                               severity === 'moderate' ? 'medium' : 'large';
+            const healthRisk = MOLD_HEALTH_RISKS.calculateRisk(
+                mold.health.includes('Toxigenic') ? 'toxigenic' : 'allergenic',
+                location,
+                occupants,
+                sizeCategory
+            );
+            
+            // Calculate costs using York PA pricing
+            
+            // Initial assessment
+            const assessmentCost = 350; // Average inspection cost
+            
+            // Containment setup
+            const containmentSetupMap = {
+                level1: 350,
+                level2: 750,
+                level3: 1500,
+                level4: 3500
+            };
+            const containmentCost = containmentSetupMap[containmentLevel];
+            
+            // Material removal (assume 50% needs removal)
+            const removalArea = affectedArea * 0.5;
+            const removalRate = (YORK_PA_MOLD_PRICING.remediation.materialRemoval.min + 
+                               YORK_PA_MOLD_PRICING.remediation.materialRemoval.max) / 2;
+            const removalCost = Math.round(removalArea * removalRate);
+            
+            // Surface cleaning (remaining 50%)
+            const cleaningArea = affectedArea * 0.5;
+            const cleaningRate = (YORK_PA_MOLD_PRICING.remediation.surfaceCleaning.min + 
+                                YORK_PA_MOLD_PRICING.remediation.surfaceCleaning.max) / 2;
+            const cleaningCost = Math.round(cleaningArea * cleaningRate);
+            
+            // HEPA vacuuming (all areas)
+            const hepaRate = (YORK_PA_MOLD_PRICING.remediation.hepaVacuuming.min + 
+                            YORK_PA_MOLD_PRICING.remediation.hepaVacuuming.max) / 2;
+            const hepaCost = Math.round(affectedArea * hepaRate);
+            
+            // Antimicrobial application
+            const antimicrobialRate = (YORK_PA_MOLD_PRICING.remediation.antimicrobialApplication.min + 
+                                     YORK_PA_MOLD_PRICING.remediation.antimicrobialApplication.max) / 2;
+            const antimicrobialCost = Math.round(affectedArea * antimicrobialRate);
+            
+            // Encapsulation (for severe cases)
+            let encapsulationCost = 0;
+            if (severity === 'severe') {
+                const encapRate = (YORK_PA_MOLD_PRICING.remediation.encapsulation.min + 
+                                 YORK_PA_MOLD_PRICING.remediation.encapsulation.max) / 2;
+                encapsulationCost = Math.round(affectedArea * 0.3 * encapRate); // 30% of area
+            }
+            
+            // Equipment rental
+            const daysNeeded = severity === 'minor' ? 1 : 
+                             severity === 'moderate' ? 2 : 3;
+            
+            const airScrubbers = Math.ceil(affectedArea / 500) || 1;
+            const negativeAir = containmentLevel !== 'level1' ? 1 : 0;
+            const dehumidifiers = 1; // Always need at least one
+            
+            const airScrubberCost = airScrubbers * 200 * daysNeeded;
+            const negativeAirCost = negativeAir * 225 * daysNeeded;
+            const dehumidifierCost = dehumidifiers * 105 * daysNeeded;
+            const equipmentTotal = airScrubberCost + negativeAirCost + dehumidifierCost;
+            
+            // Labor
+            const laborHours = {
+                minor: 4,
+                moderate: 8,
+                severe: 16
+            }[severity];
+            
+            const laborRate = 87.50; // Average technician rate
+            const laborCost = laborHours * laborRate;
+            
+            // Post-remediation verification
+            const verificationCost = severity === 'severe' ? 750 : 
+                                   severity === 'moderate' ? 500 : 0;
+            
+            // Disposal
+            const wasteBags = Math.ceil(affectedArea / 10); // 1 bag per 10 sq ft
+            const disposalCost = wasteBags * 75; // Average bag disposal
+            
+            // Calculate totals
+            const materialsCost = removalCost + cleaningCost + hepaCost + 
+                                antimicrobialCost + encapsulationCost;
+            const servicesCost = assessmentCost + containmentCost + 
+                               verificationCost + disposalCost;
+            
+            const subtotal = materialsCost + servicesCost + equipmentTotal + laborCost;
+            const totalCost = Math.round(subtotal);
+            
+            // Validate estimate
+            let warnings = [];
+            const minCost = severity === 'minor' ? MOLD_ESTIMATE_VALIDATION.minimums.smallArea :
+                          severity === 'moderate' ? MOLD_ESTIMATE_VALIDATION.minimums.mediumArea :
+                          MOLD_ESTIMATE_VALIDATION.minimums.largeArea;
+            
+            if (totalCost < minCost) {
+                warnings.push(`Estimate seems low for ${severity} mold remediation`);
+            }
+            
+            if (moldType === 'stachybotrys') {
+                warnings.push(MOLD_ESTIMATE_VALIDATION.warningFlags.blackMold);
+            }
+            
+            warnings.push(MOLD_ESTIMATE_VALIDATION.requirements.moistureSource);
+            
+            // Build equipment list
+            const equipmentList = [];
+            if (airScrubbers > 0) equipmentList.push(`${airScrubbers} HEPA Air Scrubber${airScrubbers > 1 ? 's' : ''}`);
+            if (negativeAir > 0) equipmentList.push('Negative Air Machine');
+            equipmentList.push('Commercial Dehumidifier');
+            equipmentList.push('HEPA Vacuum');
+            equipmentList.push('Moisture Meters');
+            containment.equipment.forEach(item => {
+                if (!equipmentList.includes(item)) equipmentList.push(item);
+            });
+            
+            return {
+                severity: severity,
+                moldType: moldType,
+                moldName: mold.name,
+                containmentLevel: containmentLevel,
+                containmentDesc: containment.description,
+                healthRisk: healthRisk,
+                condition: 'condition3', // Active growth for all quotes
+                description: `${mold.name} contamination detected. ${mold.appearance}. ${mold.health}. Affected area approximately ${affectedArea} sq ft requiring ${containment.description} containment and full remediation per IICRC S520 standards. ${MOLD_ESTIMATE_VALIDATION.requirements.moistureSource}`,
+                equipment: equipmentList,
+                laborHours: laborHours,
+                equipmentDays: daysNeeded,
+                laborCost: laborCost,
+                equipmentCost: equipmentTotal,
+                materialsCost: materialsCost + servicesCost,
+                totalCost: totalCost,
+                affectedArea: affectedArea,
+                validationWarnings: warnings,
+                breakdown: {
+                    assessment: assessmentCost,
+                    containment: containmentCost,
+                    removal: removalCost,
+                    cleaning: cleaningCost,
+                    hepaVacuum: hepaCost,
+                    antimicrobial: antimicrobialCost,
+                    encapsulation: encapsulationCost,
+                    verification: verificationCost,
+                    disposal: disposalCost,
+                    equipment: equipmentTotal,
+                    labor: laborCost
+                }
+            };
+        }
+
+        // Build the mold remediation AI prompt
+        function buildMoldRemediationPrompt() {
+            return `You are an IICRC S520-certified mold assessment specialist analyzing photos for Major Restoration Services in York, PA.
+
+CRITICAL CONTEXT:
+- Location: York, PA (high humidity region)
+- Standards: Follow IICRC S520-2024 guidelines
+- Purpose: Insurance-compliant documentation
+- Pricing Region: South Central Pennsylvania
+
+Analyze this image for mold contamination and provide:
+
+1. MOLD CONDITION CLASSIFICATION (per IICRC S520):
+   - Condition 1: Normal fungal ecology (no action needed)
+   - Condition 2: Settled spores requiring cleaning (no visible growth)
+   - Condition 3: Active mold growth requiring remediation
+   
+2. VISUAL IDENTIFICATION:
+   Describe ALL observed characteristics:
+   - Color patterns (black, green, white, gray, brown, yellow, orange)
+   - Texture (fuzzy, velvety, slimy, powdery, cottony, hairy)
+   - Growth pattern (clustered, spread, circular colonies, following moisture)
+   - Surface coverage (spots, patches, continuous growth)
+   
+3. PROBABLE MOLD TYPES (based on visual indicators):
+   ${JSON.stringify(MOLD_TYPES, null, 2)}
+   
+4. CONTAINMENT REQUIREMENTS:
+   ${JSON.stringify(CONTAINMENT_LEVELS, null, 2)}
+   
+5. COST ESTIMATE using York, PA rates:
+   ${JSON.stringify(YORK_PA_MOLD_PRICING, null, 2)}
+   
+6. HEALTH RISK ASSESSMENT:
+   Rate urgency (1-10) based on toxigenic potential, location, and size
+
+Return JSON with complete assessment:
+{
+  "conditionLevel": 1-3,
+  "contaminationLevel": 1-5,
+  "visibleGrowthSqFt": number,
+  "moldTypesLikely": ["species names"],
+  "materialsAffected": {
+    "remove": ["list"],
+    "clean": ["list"],
+    "monitor": ["list"]
+  },
+  "containmentRequired": "level description",
+  "equipmentNeeded": ["detailed list"],
+  "healthRiskScore": 1-10,
+  "estimatedCost": {
+    "low": number,
+    "high": number,
+    "breakdown": {}
+  },
+  "remediationDays": number,
+  "moistureSource": "description",
+  "insuranceNotes": ["key points"],
+  "immediateActions": ["urgent steps"],
+  "professionalTestingRequired": boolean
+}`;
+        }
+
         // Build the enhanced fire restoration AI prompt
         function buildFireRestorationPrompt() {
             return `You are an IICRC S700-certified fire damage restoration expert analyzing photos for Major Restoration Services in York, PA.
@@ -1756,6 +2247,8 @@ Return a JSON response with this structure:
             const isIICRC = currentQuoteData.waterCategory && currentDamage === 'water';
             // Check if this is S700-compliant fire damage quote
             const isS700 = currentQuoteData.smokeType && currentDamage === 'fire';
+            // Check if this is S520-compliant mold remediation quote
+            const isS520 = currentQuoteData.moldType && currentDamage === 'mold';
             
             // Build HTML based on quote type
             let assessmentHTML = '';
@@ -1849,6 +2342,53 @@ Return a JSON response with this structure:
 
                         <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
                             Valid for 30 days • Insurance claim assistance • 24/7 Emergency Response
+                        </p>
+                    </div>
+                `;
+            } else if (isS520) {
+                // Enhanced display for IICRC S520 mold remediation quotes
+                assessmentHTML = `
+                    <div class="step-indicator">Your Professional IICRC S520-Compliant Mold Remediation Quote</div>
+                    
+                    <!-- Photo preview -->
+                    <img id="photo-preview" class="photo-preview" style="display: none;">
+                    
+                    <!-- Mold Classification -->
+                    <div class="${currentQuoteData.healthRisk > 7 ? 'warning-box' : 'info-box'}">
+                        <strong>${currentQuoteData.moldName}</strong><br>
+                        <strong>Containment: ${currentQuoteData.containmentDesc}</strong><br>
+                        <small>${currentQuoteData.affectedArea} sq ft • Health Risk: ${currentQuoteData.healthRisk}/10</small>
+                    </div>
+                    
+                    <!-- Assessment -->
+                    <div class="result-box">
+                        <div class="result-title">
+                            Mold Assessment 
+                            <span id="severity-badge" class="severity-badge"></span>
+                        </div>
+                        <div id="assessment-text" class="result-text"></div>
+                        <div id="equipment-list" style="margin-top: 15px;"></div>
+                        ${currentQuoteData.validationWarnings && currentQuoteData.validationWarnings.length > 0 ? `
+                        <div class="warning-box" style="margin-top: 15px;">
+                            <strong>⚠️ Important:</strong><br>
+                            ${currentQuoteData.validationWarnings.map(w => `• ${w}`).join('<br>')}
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Detailed Quote -->
+                    <div class="result-box">
+                        <div class="result-title">Professional Quote - IICRC S520 Standards</div>
+                        
+                        <div id="quote-details"></div>
+                        
+                        <div class="quote-item total">
+                            <span>TOTAL ESTIMATE</span>
+                            <span>$<span id="total-cost">0</span></span>
+                        </div>
+
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 15px; text-align: center;">
+                            Valid for 30 days • Testing recommended • Insurance documentation available
                         </p>
                     </div>
                 `;
@@ -1976,6 +2516,57 @@ Return a JSON response with this structure:
                         </div>` : ''}
                         <div class="quote-item">
                             <span>Equipment Rental (${currentQuoteData.equipmentDays} days)</span>
+                            <span>$${currentQuoteData.breakdown.equipment.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Professional Labor (${currentQuoteData.laborHours} hours)</span>
+                            <span>$${currentQuoteData.breakdown.labor.toLocaleString()}</span>
+                        </div>
+                    `;
+                } else if (isS520 && currentQuoteData.breakdown) {
+                    // Detailed S520 mold remediation breakdown
+                    quoteHtml = `
+                        <div class="quote-item">
+                            <span>Initial Assessment</span>
+                            <span>$${currentQuoteData.breakdown.assessment.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Containment Setup</span>
+                            <span>$${currentQuoteData.breakdown.containment.toLocaleString()}</span>
+                        </div>
+                        ${currentQuoteData.breakdown.removal > 0 ? `
+                        <div class="quote-item">
+                            <span>Material Removal</span>
+                            <span>$${currentQuoteData.breakdown.removal.toLocaleString()}</span>
+                        </div>` : ''}
+                        <div class="quote-item">
+                            <span>Surface Cleaning</span>
+                            <span>$${currentQuoteData.breakdown.cleaning.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>HEPA Vacuuming</span>
+                            <span>$${currentQuoteData.breakdown.hepaVacuum.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Antimicrobial Treatment</span>
+                            <span>$${currentQuoteData.breakdown.antimicrobial.toLocaleString()}</span>
+                        </div>
+                        ${currentQuoteData.breakdown.encapsulation > 0 ? `
+                        <div class="quote-item">
+                            <span>Encapsulation</span>
+                            <span>$${currentQuoteData.breakdown.encapsulation.toLocaleString()}</span>
+                        </div>` : ''}
+                        ${currentQuoteData.breakdown.verification > 0 ? `
+                        <div class="quote-item">
+                            <span>Post-Remediation Verification</span>
+                            <span>$${currentQuoteData.breakdown.verification.toLocaleString()}</span>
+                        </div>` : ''}
+                        <div class="quote-item">
+                            <span>Waste Disposal</span>
+                            <span>$${currentQuoteData.breakdown.disposal.toLocaleString()}</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Equipment (${currentQuoteData.equipmentDays} days)</span>
                             <span>$${currentQuoteData.breakdown.equipment.toLocaleString()}</span>
                         </div>
                         <div class="quote-item">
