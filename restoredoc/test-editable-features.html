@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Editable Features</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .line-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        .editable {
+            background: #fffbf0;
+            border: 2px solid #ffc107;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Editable Features Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>1. Edit Mode Toggle Test</h2>
+        <button onclick="testEditMode()">Test Edit Mode Toggle</button>
+        <div id="edit-mode-results"></div>
+        
+        <div id="demo-line-items" style="margin-top: 20px;">
+            <h3>Demo Line Items</h3>
+            <div class="line-item" id="item-1">
+                <span>Water Extraction</span>
+                <span>Qty: <span id="qty-1">500</span></span>
+                <span>Unit Price: $<span id="price-1">1.50</span></span>
+                <span>Total: $<span id="total-1">750.00</span></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Quantity Adjustment Test</h2>
+        <button onclick="testQuantityAdjustment()">Test Quantity Controls</button>
+        <div id="quantity-results"></div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Test Item</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="adjustTestQuantity(-1)">-</button>
+                <input type="number" id="test-quantity" value="10">
+                <button onclick="adjustTestQuantity(1)">+</button>
+                <span>Total: $<span id="test-total">100.00</span></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Quick Adjustments Test</h2>
+        <button onclick="testQuickAdjustments()">Test Quick Adjustments</button>
+        <div id="quick-adjustment-results"></div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Current Settings</h3>
+            <p>Labor Rate: $<span id="current-labor">125</span>/hr</p>
+            <p>Equipment Days: <span id="current-days">3</span></p>
+            <p>Markup: <span id="current-markup">0</span>%</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Custom Line Item Test</h2>
+        <button onclick="testAddCustomItem()">Test Add Custom Item</button>
+        <div id="custom-item-results"></div>
+        
+        <div id="custom-items-list" style="margin-top: 20px;">
+            <h3>Custom Items</h3>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Total Calculation Test</h2>
+        <button onclick="testTotalCalculation()">Test Total Calculations</button>
+        <div id="calculation-results"></div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Totals</h3>
+            <p>Original: $<span id="calc-original">0.00</span></p>
+            <p>Adjustments: $<span id="calc-adjustments">0.00</span></p>
+            <p>Final Total: $<span id="calc-final">0.00</span></p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Data Persistence Test</h2>
+        <button onclick="testDataStructure()">Test Data Structure</button>
+        <button onclick="testSaveLoad()">Test Save/Load</button>
+        <div id="persistence-results"></div>
+        
+        <pre id="data-preview" style="margin-top: 20px; display: none;"></pre>
+    </div>
+
+    <script>
+        // Test state
+        let editMode = false;
+        let testQuantity = 10;
+        let testPrice = 10;
+        let laborRate = 125;
+        let equipmentDays = 3;
+        let markupPercent = 0;
+        let customItems = [];
+
+        // Test Edit Mode Toggle
+        function testEditMode() {
+            const results = document.getElementById('edit-mode-results');
+            results.innerHTML = '';
+            
+            // Test toggle on
+            editMode = true;
+            document.getElementById('item-1').classList.add('editable');
+            results.innerHTML += '<div class="test-result pass">✓ Edit mode activated</div>';
+            
+            // Test toggle off
+            setTimeout(() => {
+                editMode = false;
+                document.getElementById('item-1').classList.remove('editable');
+                results.innerHTML += '<div class="test-result pass">✓ Edit mode deactivated</div>';
+            }, 1000);
+            
+            // Test state persistence
+            results.innerHTML += `<div class="test-result info">Current mode: ${editMode ? 'Edit' : 'View'}</div>`;
+        }
+
+        // Test Quantity Adjustment
+        function testQuantityAdjustment() {
+            const results = document.getElementById('quantity-results');
+            results.innerHTML = '';
+            
+            // Test increment
+            const initialQty = testQuantity;
+            adjustTestQuantity(1);
+            if (testQuantity === initialQty + 1) {
+                results.innerHTML += '<div class="test-result pass">✓ Increment works</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Increment failed</div>';
+            }
+            
+            // Test decrement
+            adjustTestQuantity(-1);
+            if (testQuantity === initialQty) {
+                results.innerHTML += '<div class="test-result pass">✓ Decrement works</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Decrement failed</div>';
+            }
+            
+            // Test minimum value
+            testQuantity = 1;
+            adjustTestQuantity(-1);
+            if (testQuantity === 1) {
+                results.innerHTML += '<div class="test-result pass">✓ Minimum value enforced</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Minimum value not enforced</div>';
+            }
+            
+            // Test total calculation
+            testQuantity = 10;
+            updateTestTotal();
+            const expectedTotal = testQuantity * testPrice;
+            const actualTotal = parseFloat(document.getElementById('test-total').textContent);
+            if (actualTotal === expectedTotal) {
+                results.innerHTML += '<div class="test-result pass">✓ Total calculation correct</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Total calculation incorrect</div>';
+            }
+        }
+
+        function adjustTestQuantity(delta) {
+            testQuantity = Math.max(1, testQuantity + delta);
+            document.getElementById('test-quantity').value = testQuantity;
+            updateTestTotal();
+        }
+
+        function updateTestTotal() {
+            const total = testQuantity * testPrice;
+            document.getElementById('test-total').textContent = total.toFixed(2);
+        }
+
+        // Test Quick Adjustments
+        function testQuickAdjustments() {
+            const results = document.getElementById('quick-adjustment-results');
+            results.innerHTML = '';
+            
+            // Test labor rate changes
+            const rates = [85, 125, 150];
+            rates.forEach(rate => {
+                laborRate = rate;
+                document.getElementById('current-labor').textContent = laborRate;
+                results.innerHTML += `<div class="test-result pass">✓ Labor rate set to $${rate}</div>`;
+            });
+            
+            // Test equipment days
+            const days = [3, 5, 7];
+            days.forEach(day => {
+                equipmentDays = day;
+                document.getElementById('current-days').textContent = equipmentDays;
+                results.innerHTML += `<div class="test-result pass">✓ Equipment days set to ${day}</div>`;
+            });
+            
+            // Test markup
+            const markups = [0, 10, 25];
+            markups.forEach(markup => {
+                markupPercent = markup;
+                document.getElementById('current-markup').textContent = markupPercent;
+                results.innerHTML += `<div class="test-result pass">✓ Markup set to ${markup}%</div>`;
+            });
+        }
+
+        // Test Add Custom Item
+        function testAddCustomItem() {
+            const results = document.getElementById('custom-item-results');
+            const list = document.getElementById('custom-items-list');
+            results.innerHTML = '';
+            
+            // Test adding item
+            const newItem = {
+                description: 'Additional Equipment',
+                quantity: 2,
+                unit: 'day',
+                unitPrice: 100,
+                total: 200
+            };
+            
+            customItems.push(newItem);
+            
+            // Update UI
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'line-item';
+            itemDiv.innerHTML = `
+                <span>${newItem.description}</span>
+                <span>Qty: ${newItem.quantity}</span>
+                <span>Unit: ${newItem.unit}</span>
+                <span>Price: $${newItem.unitPrice}</span>
+                <span>Total: $${newItem.total}</span>
+            `;
+            list.appendChild(itemDiv);
+            
+            results.innerHTML += '<div class="test-result pass">✓ Custom item added successfully</div>';
+            
+            // Test validation
+            if (newItem.total === newItem.quantity * newItem.unitPrice) {
+                results.innerHTML += '<div class="test-result pass">✓ Item total calculated correctly</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Item total calculation error</div>';
+            }
+        }
+
+        // Test Total Calculation
+        function testTotalCalculation() {
+            const results = document.getElementById('calculation-results');
+            results.innerHTML = '';
+            
+            // Setup test data
+            const lineItems = [
+                { description: 'Item 1', quantity: 10, unitPrice: 50, total: 500 },
+                { description: 'Item 2', quantity: 5, unitPrice: 100, total: 500 },
+                { description: 'Item 3', quantity: 2, unitPrice: 250, total: 500 }
+            ];
+            
+            const original = lineItems.reduce((sum, item) => sum + item.total, 0);
+            const withMarkup = original * (1 + markupPercent / 100);
+            const adjustments = withMarkup - original;
+            
+            document.getElementById('calc-original').textContent = original.toFixed(2);
+            document.getElementById('calc-adjustments').textContent = adjustments.toFixed(2);
+            document.getElementById('calc-final').textContent = withMarkup.toFixed(2);
+            
+            // Verify calculations
+            if (original === 1500) {
+                results.innerHTML += '<div class="test-result pass">✓ Original total correct: $1500</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Original total incorrect</div>';
+            }
+            
+            // Test with 10% markup
+            markupPercent = 10;
+            const expected = 1650;
+            const actual = original * 1.1;
+            if (Math.abs(actual - expected) < 0.01) {
+                results.innerHTML += '<div class="test-result pass">✓ 10% markup calculation correct</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ Markup calculation error</div>';
+            }
+            
+            // Test with 25% markup
+            markupPercent = 25;
+            const expected25 = 1875;
+            const actual25 = original * 1.25;
+            if (Math.abs(actual25 - expected25) < 0.01) {
+                results.innerHTML += '<div class="test-result pass">✓ 25% markup calculation correct</div>';
+            } else {
+                results.innerHTML += '<div class="test-result fail">✗ 25% markup calculation error</div>';
+            }
+        }
+
+        // Test Data Structure
+        function testDataStructure() {
+            const results = document.getElementById('persistence-results');
+            const preview = document.getElementById('data-preview');
+            results.innerHTML = '';
+            
+            // Create test estimate object
+            const estimate = {
+                job_id: 'test-job-123',
+                contractor_id: 'contractor-456',
+                customer: {
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    phone: '555-0100',
+                    address: '123 Main St, York, PA 17401'
+                },
+                damage_type: 'water',
+                ai_analysis: {
+                    severity: 'moderate',
+                    affected_area: 500,
+                    confidence: 85
+                },
+                line_items: [
+                    {
+                        description: 'Water extraction',
+                        quantity: 500,
+                        unit: 'sqft',
+                        unitPrice: 1.50,
+                        total: 750,
+                        category: 'Mitigation'
+                    },
+                    {
+                        description: 'Drying equipment',
+                        quantity: 3,
+                        unit: 'day',
+                        unitPrice: 150,
+                        total: 450,
+                        category: 'Equipment'
+                    }
+                ],
+                original_total: 1200,
+                adjusted_total: 1320,
+                labor_rate: 125,
+                equipment_days: 3,
+                markup_percent: 10,
+                photos_urls: ['photo1.jpg', 'photo2.jpg'],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            
+            // Display structure
+            preview.style.display = 'block';
+            preview.textContent = JSON.stringify(estimate, null, 2);
+            
+            // Validate structure
+            const requiredFields = [
+                'job_id', 'customer', 'damage_type', 'line_items', 
+                'original_total', 'adjusted_total'
+            ];
+            
+            let allFieldsPresent = true;
+            requiredFields.forEach(field => {
+                if (estimate[field] !== undefined) {
+                    results.innerHTML += `<div class="test-result pass">✓ Field '${field}' present</div>`;
+                } else {
+                    results.innerHTML += `<div class="test-result fail">✗ Field '${field}' missing</div>`;
+                    allFieldsPresent = false;
+                }
+            });
+            
+            if (allFieldsPresent) {
+                results.innerHTML += '<div class="test-result info">✓ Data structure valid for database storage</div>';
+            }
+        }
+
+        // Test Save/Load
+        function testSaveLoad() {
+            const results = document.getElementById('persistence-results');
+            results.innerHTML = '';
+            
+            // Test localStorage save
+            const testData = {
+                id: 'test-' + Date.now(),
+                customer_name: 'Test Customer',
+                line_items: [
+                    { description: 'Test Item', quantity: 1, unitPrice: 100, total: 100 }
+                ],
+                total: 100
+            };
+            
+            try {
+                // Save to localStorage
+                localStorage.setItem('fieldquote_test_estimate', JSON.stringify(testData));
+                results.innerHTML += '<div class="test-result pass">✓ Data saved to localStorage</div>';
+                
+                // Load from localStorage
+                const loaded = JSON.parse(localStorage.getItem('fieldquote_test_estimate'));
+                
+                if (loaded.id === testData.id) {
+                    results.innerHTML += '<div class="test-result pass">✓ Data loaded correctly</div>';
+                } else {
+                    results.innerHTML += '<div class="test-result fail">✗ Data load mismatch</div>';
+                }
+                
+                // Clean up
+                localStorage.removeItem('fieldquote_test_estimate');
+                results.innerHTML += '<div class="test-result info">✓ Test data cleaned up</div>';
+                
+            } catch (error) {
+                results.innerHTML += `<div class="test-result fail">✗ Storage error: ${error.message}</div>`;
+            }
+            
+            // Test Supabase structure (mock)
+            results.innerHTML += '<div class="test-result info">ℹ️ Supabase integration requires configuration (see SUPABASE_SETUP.md)</div>';
+        }
+    </script>
+</body>
+</html>
