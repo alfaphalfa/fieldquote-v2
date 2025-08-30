@@ -19,7 +19,8 @@
       "Bash(timeout:*)",
       "Bash(dir:*)",
       "Bash(curl:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
