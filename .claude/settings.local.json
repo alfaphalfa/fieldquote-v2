@@ -18,7 +18,8 @@
       "Bash(python:*)",
       "Bash(timeout:*)",
       "Bash(dir:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
