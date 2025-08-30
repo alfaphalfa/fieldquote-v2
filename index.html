@@ -1214,12 +1214,138 @@
             showStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} damage selected`, 2000);
         }
 
+        // Validate photo before processing
+        function isValidMoldPhoto(file) {
+            // Check file size (under 20MB for Gemini)
+            if (file.size > 20 * 1024 * 1024) {
+                showStatus('Photo too large. Maximum size is 20MB.', 3000, 'error');
+                return false;
+            }
+            
+            // Check file type (jpeg, png, webp)
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                showStatus('Invalid file type. Please use JPEG, PNG, or WebP.', 3000, 'error');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Clean and validate Gemini response
+        function cleanGeminiResponse(response) {
+            try {
+                // Remove any markdown backticks and clean the response
+                let cleaned = response
+                    .replace(/```json\n?/gi, '')
+                    .replace(/```\n?/gi, '')
+                    .replace(/^[^{]*/, '') // Remove any text before the JSON
+                    .replace(/[^}]*$/, '') // Remove any text after the JSON
+                    .trim();
+                
+                // Try to find JSON object in the response
+                const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON object found in response');
+                }
+                
+                // Parse the JSON
+                const data = JSON.parse(jsonMatch[0]);
+                
+                // Validate required fields for mold analysis
+                if (data.has_mold !== undefined && data.cost_estimate) {
+                    // Valid mold response
+                    return data;
+                }
+                
+                // Validate required fields for water damage
+                if (data.waterCategory || data.waterClass) {
+                    return data;
+                }
+                
+                // Validate required fields for fire damage
+                if (data.fireClass || data.smokeType) {
+                    return data;
+                }
+                
+                // If we can't identify the response type, return it anyway
+                console.warn('Response structure unclear, returning as-is:', data);
+                return data;
+                
+            } catch (error) {
+                console.error('Failed to parse Gemini response:', error, 'Original response:', response);
+                return {
+                    error: 'Analysis failed - please try again or use manual assessment',
+                    requires_testing: true,
+                    has_mold: false
+                };
+            }
+        }
+
+        // Validate required fields in mold response
+        function validateMoldResponse(data) {
+            const requiredFields = [
+                'has_mold',
+                'confidence_percent',
+                'condition_level',
+                'square_footage',
+                'containment_level',
+                'health_risk',
+                'cost_estimate',
+                'days_required',
+                'requires_testing'
+            ];
+            
+            const missingFields = [];
+            for (const field of requiredFields) {
+                if (data[field] === undefined || data[field] === null) {
+                    missingFields.push(field);
+                }
+            }
+            
+            if (missingFields.length > 0) {
+                console.warn('Missing fields in mold response:', missingFields);
+                // Add default values for missing fields
+                if (data.has_mold === undefined) data.has_mold = true;
+                if (data.confidence_percent === undefined) data.confidence_percent = 50;
+                if (data.condition_level === undefined) data.condition_level = 3;
+                if (data.square_footage === undefined) data.square_footage = 10;
+                if (data.containment_level === undefined) data.containment_level = 2;
+                if (data.health_risk === undefined) data.health_risk = 5;
+                if (data.days_required === undefined) data.days_required = 2;
+                if (data.requires_testing === undefined) data.requires_testing = true;
+                if (!data.cost_estimate) {
+                    data.cost_estimate = {
+                        low: 1500,
+                        high: 3500,
+                        breakdown: {
+                            containment: 500,
+                            removal: 500,
+                            cleaning: 500,
+                            equipment: 400,
+                            testing: 300
+                        }
+                    };
+                }
+            }
+            
+            return data;
+        }
+
         // Photo taken
         function photoTaken(event) {
             const file = event.target.files[0];
             if (file) {
+                // Validate photo for mold analysis if applicable
+                if (currentDamage === 'mold' && !isValidMoldPhoto(file)) {
+                    event.target.value = ''; // Clear the input
+                    return;
+                }
+                
+                // General size check for other damage types
                 if (file.size > 20 * 1024 * 1024) {
                     showStatus('Photo too large. Please use a smaller image.', 3000, 'error');
+                    event.target.value = ''; // Clear the input
                     return;
                 }
                 
@@ -1238,11 +1364,13 @@
                     if (photoPreview) {
                         photoPreview.src = e.target.result;
                     }
+                    // Store for later display
+                    window.photoDataUrl = e.target.result;
                 };
                 reader.readAsDataURL(file);
                 
                 showScreen('screen-severity');
-                showStatus('Photo captured - now select damage severity', 3000);
+                showStatus('Photo captured successfully! Now select damage severity.', 3000, 'success');
             }
         }
 
@@ -1309,10 +1437,15 @@
         async function generateQuote() {
             showScreen('screen-loading');
             
+            // Show loading status
+            showStatus('Analyzing damage photo...', 0, 'loading');
+            
             // Check if we should use AI analysis
             if (currentPhoto && API_KEY !== 'YOUR_API_KEY_HERE' && API_KEY !== '') {
                 // Try AI-powered analysis based on damage type
                 try {
+                    // Update loading message
+                    showStatus('Processing image with AI...', 0, 'loading');
                     let aiQuote = null;
                     
                     if (currentDamage === 'water') {
@@ -1323,17 +1456,27 @@
                         aiQuote = await generateAIQuote('mold');
                     }
                     
+                    // Hide loading status
+                    document.getElementById('status').style.display = 'none';
+                    
                     if (aiQuote) {
                         currentQuoteData = aiQuote;
+                        showStatus('AI analysis complete!', 2000, 'success');
                         displayQuoteResults();
                         return;
                     }
                 } catch (error) {
                     console.log('AI analysis failed, using manual assessment:', error);
+                    // Hide loading status
+                    document.getElementById('status').style.display = 'none';
                 }
             }
             
+            // Hide any remaining loading status
+            document.getElementById('status').style.display = 'none';
+            
             // Fallback to manual severity-based quote
+            showStatus('Generating quote based on manual assessment...', 2000, 'info');
             setTimeout(() => {
                 if (currentSeverity === 'none') {
                     showNoDamageResults();
@@ -1596,10 +1739,21 @@
                 // Check for API response
                 if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
                     console.error('Invalid API response structure:', data);
+                    showStatus('AI analysis unavailable, using manual assessment', 3000, 'warning');
                     return null;
                 }
                 
                 const aiResponse = data.candidates[0].content.parts[0].text;
+                
+                // Clean the response first
+                const cleanedData = cleanGeminiResponse(aiResponse);
+                
+                // Check for errors in cleaned data
+                if (cleanedData.error) {
+                    console.error('Error in AI response:', cleanedData.error);
+                    showStatus(cleanedData.error, 4000, 'warning');
+                    return null;
+                }
                 
                 // Parse AI response based on damage type
                 if (damageType === 'water') {
@@ -1607,7 +1761,9 @@
                 } else if (damageType === 'fire') {
                     return parseFireDamageResponse(aiResponse);
                 } else if (damageType === 'mold') {
-                    return parseMoldDamageResponse(aiResponse);
+                    // Validate mold response before parsing
+                    const validatedData = validateMoldResponse(cleanedData);
+                    return parseMoldDamageResponseV2(validatedData);
                 }
                 
             } catch (error) {
@@ -2054,7 +2210,162 @@
             }
         }
 
-        // Parse mold damage AI response
+        // Parse mold damage AI response V2 - uses pre-validated data
+        function parseMoldDamageResponseV2(aiData) {
+            try {
+                // Data is already cleaned and validated
+                
+                // Check for no mold detected
+                if (!aiData.has_mold) {
+                    console.log('No mold detected in image');
+                    showStatus('No mold detected - manual assessment recommended', 3000, 'info');
+                    return null;
+                }
+                
+                // Map condition level to severity
+                const severity = aiData.condition_level === 1 ? 'minor' :
+                               aiData.condition_level === 2 ? 'moderate' : 'severe';
+                
+                // Determine mold type from the response
+                let moldType = 'aspergillus'; // Default
+                let primaryMoldInfo = null;
+                
+                if (aiData.mold_types && aiData.mold_types.length > 0) {
+                    primaryMoldInfo = aiData.mold_types[0];
+                    const firstType = primaryMoldInfo.type.toLowerCase();
+                    
+                    if (firstType.includes('stachybotrys') || firstType.includes('black')) {
+                        moldType = 'stachybotrys';
+                    } else if (firstType.includes('penicillium')) {
+                        moldType = 'penicillium';
+                    } else if (firstType.includes('cladosporium')) {
+                        moldType = 'cladosporium';
+                    } else if (firstType.includes('alternaria')) {
+                        moldType = 'alternaria';
+                    } else if (firstType.includes('chaetomium')) {
+                        moldType = 'chaetomium';
+                    } else if (firstType.includes('fusarium')) {
+                        moldType = 'fusarium';
+                    } else if (firstType.includes('aspergillus')) {
+                        moldType = 'aspergillus';
+                    }
+                }
+                
+                const mold = MOLD_TYPES[moldType];
+                
+                // Get containment level
+                const containmentLevel = `level${aiData.containment_level}`;
+                const containment = CONTAINMENT_LEVELS[containmentLevel] || CONTAINMENT_LEVELS.level2;
+                
+                // Build equipment list from response
+                const equipment = aiData.equipment_list || [];
+                if (equipment.length === 0) {
+                    equipment.push('HEPA Air Scrubber: 1', 'Negative Air Machine: 1', 'HEPA Vacuum: 1');
+                    containment.equipment.forEach(item => {
+                        if (!equipment.some(e => e.includes(item))) {
+                            equipment.push(item);
+                        }
+                    });
+                }
+                
+                // Process costs
+                const totalCost = aiData.cost_estimate ? 
+                    Math.round((aiData.cost_estimate.high + aiData.cost_estimate.low) / 2) : 3000;
+                
+                // Build comprehensive description
+                let description = `AI-Analyzed (${aiData.confidence_percent}% confidence): `;
+                
+                if (primaryMoldInfo) {
+                    description += `${primaryMoldInfo.type} detected (${primaryMoldInfo.likelihood} likelihood). `;
+                    if (primaryMoldInfo.visual_indicators) {
+                        description += `Visual indicators: ${primaryMoldInfo.visual_indicators}. `;
+                    }
+                } else {
+                    description += `${mold.name} detected. `;
+                }
+                
+                description += `${aiData.square_footage} sq ft affected. `;
+                description += `${aiData.moisture_source}. `;
+                description += `Level ${aiData.containment_level} containment required per IICRC S520.`;
+                
+                // Build warnings
+                let warnings = aiData.insurance_notes || [];
+                
+                // Add critical warnings
+                if (aiData.moisture_source === 'investigation needed' || 
+                    aiData.moisture_source.toLowerCase().includes('unknown')) {
+                    warnings.push(MOLD_ESTIMATE_VALIDATION.requirements.moistureSource);
+                }
+                
+                if (moldType === 'stachybotrys') {
+                    warnings.push(MOLD_ESTIMATE_VALIDATION.warningFlags.blackMold);
+                }
+                
+                if (aiData.square_footage > 100) {
+                    warnings.push(MOLD_ESTIMATE_VALIDATION.warningFlags.largeCoverage);
+                }
+                
+                if (aiData.requires_testing) {
+                    warnings.push('Professional air quality testing recommended');
+                }
+                
+                // Process breakdown
+                let breakdown = null;
+                if (aiData.cost_estimate && aiData.cost_estimate.breakdown) {
+                    const b = aiData.cost_estimate.breakdown;
+                    breakdown = {
+                        assessment: 350, // Standard assessment
+                        containment: b.containment || 750,
+                        removal: b.removal || 0,
+                        cleaning: b.cleaning || 0,
+                        hepaVacuum: Math.round((b.cleaning || 0) * 0.2),
+                        antimicrobial: Math.round((b.cleaning || 0) * 0.3),
+                        encapsulation: severity === 'severe' ? Math.round(aiData.square_footage * 3.75) : 0,
+                        verification: b.testing || 0,
+                        disposal: Math.round((b.removal || 0) * 0.1),
+                        equipment: b.equipment || 400,
+                        labor: Math.round((aiData.days_required || 2) * 8 * 87.50)
+                    };
+                }
+                
+                return {
+                    severity: severity,
+                    moldType: moldType,
+                    moldName: mold.name,
+                    containmentLevel: containmentLevel,
+                    containmentDesc: containment.description,
+                    healthRisk: aiData.health_risk || 5,
+                    condition: `condition${aiData.condition_level}`,
+                    description: description,
+                    equipment: equipment,
+                    laborHours: (aiData.days_required || 2) * 8,
+                    equipmentDays: aiData.days_required || 2,
+                    laborCost: Math.round((aiData.days_required || 2) * 8 * 87.50),
+                    equipmentCost: breakdown ? breakdown.equipment : Math.round((aiData.days_required || 2) * 400),
+                    materialsCost: breakdown ? 
+                        (breakdown.removal + breakdown.cleaning + breakdown.antimicrobial + 
+                         breakdown.containment + breakdown.encapsulation) :
+                        Math.round(totalCost * 0.6),
+                    totalCost: totalCost,
+                    affectedArea: aiData.square_footage,
+                    validationWarnings: warnings,
+                    aiAnalyzed: true,
+                    confidence: aiData.confidence_percent,
+                    immediateActions: aiData.urgent_actions || [],
+                    testingRequired: aiData.requires_testing,
+                    breakdown: breakdown,
+                    affectedMaterials: aiData.affected_materials,
+                    moldTypes: aiData.mold_types // Include all detected types
+                };
+                
+            } catch (error) {
+                console.error('Error parsing mold AI response V2:', error);
+                showStatus('Error processing mold analysis - using manual assessment', 3000, 'warning');
+                return null;
+            }
+        }
+
+        // Parse mold damage AI response (legacy)
         function parseMoldDamageResponse(aiResponse) {
             try {
                 // Clean the response - remove any markdown or extra text
@@ -3258,12 +3569,230 @@ Valid 30 days • Call 717-855-2367`;
             }, duration);
         }
 
+        // Test Gemini Response with custom image
+        async function testGeminiWithImage(imageFile) {
+            console.log('🧪 Testing Gemini with provided image...');
+            
+            if (API_KEY === 'YOUR_API_KEY_HERE' || API_KEY === '') {
+                console.error('❌ API key not configured');
+                return;
+            }
+            
+            // Convert image to base64
+            const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.readAsDataURL(imageFile);
+            });
+            
+            const startTime = performance.now();
+            
+            try {
+                const aiData = await generateAIQuote('mold');
+                const endTime = performance.now();
+                
+                console.log(`⏱️ Response time: ${Math.round(endTime - startTime)}ms`);
+                
+                if (aiData) {
+                    console.log('✅ Analysis successful');
+                    console.log('Mold detected:', aiData.has_mold || false);
+                    console.log('Confidence:', (aiData.confidence_percent || 0) + '%');
+                    console.log('Health risk:', (aiData.health_risk || 0) + '/10');
+                    console.log('Estimated cost: $' + (aiData.totalCost || 0));
+                    console.log('Full data:', aiData);
+                } else {
+                    console.log('⚠️ No data returned - manual assessment needed');
+                }
+            } catch (error) {
+                console.error('❌ Test failed:', error);
+            }
+        }
+        
+        // Test Gemini Response Function
+        async function testGeminiResponse() {
+            console.log('🧪 Starting Gemini Response Test...');
+            
+            // Check if API key is configured
+            if (API_KEY === 'YOUR_API_KEY_HERE' || API_KEY === '') {
+                console.error('❌ API key not configured. Add your Gemini API key to test.');
+                return;
+            }
+            
+            // Create a test image (1x1 black pixel PNG)
+            const testImageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+            
+            try {
+                console.log('📤 Sending test request to Gemini...');
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { 
+                                    text: `Analyze this image for mold. Return ONLY valid JSON with no markdown formatting.
+                                    
+                                    Required JSON structure:
+                                    {
+                                        "has_mold": false,
+                                        "confidence_percent": 5,
+                                        "condition_level": 1,
+                                        "square_footage": 0,
+                                        "containment_level": 0,
+                                        "health_risk": 0,
+                                        "mold_types": [],
+                                        "cost_estimate": {
+                                            "low": 0,
+                                            "high": 0,
+                                            "breakdown": {
+                                                "containment": 0,
+                                                "removal": 0,
+                                                "cleaning": 0,
+                                                "equipment": 0,
+                                                "testing": 0
+                                            }
+                                        },
+                                        "days_required": 0,
+                                        "requires_testing": false,
+                                        "notes": "Test image - no actual mold present"
+                                    }`
+                                },
+                                {
+                                    inlineData: {
+                                        mimeType: 'image/png',
+                                        data: testImageBase64
+                                    }
+                                }
+                            ]
+                        }],
+                        generationConfig: {
+                            temperature: 0.1,
+                            topK: 1,
+                            topP: 1,
+                            maxOutputTokens: 2048,
+                        },
+                        safetySettings: [
+                            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                        ]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ API Error:', response.status, errorData);
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('✅ API Response received');
+                
+                // Extract the text response
+                const rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                console.log('📝 Raw response:', rawResponse);
+                
+                // Check for common formatting issues
+                if (rawResponse.includes('```')) {
+                    console.warn('⚠️ Gemini added markdown formatting - cleaning required');
+                }
+                
+                if (rawResponse.match(/^[^{]*[a-zA-Z]/)) {
+                    console.warn('⚠️ Gemini added text before JSON - cleaning required');
+                }
+                
+                if (rawResponse.match(/[a-zA-Z][^}]*$/)) {
+                    console.warn('⚠️ Gemini added text after JSON - cleaning required');
+                }
+                
+                // Test cleaning function
+                console.log('🧹 Testing cleanGeminiResponse function...');
+                const cleaned = cleanGeminiResponse(rawResponse);
+                console.log('📋 Cleaned data:', cleaned);
+                
+                // Validate the cleaned response
+                try {
+                    // Check if it's valid JSON
+                    if (typeof cleaned === 'object') {
+                        console.log('✅ Valid JSON structure');
+                        
+                        // Check key fields
+                        if (cleaned.has_mold !== undefined) {
+                            console.log('✅ has_mold:', cleaned.has_mold);
+                        } else {
+                            console.error('❌ Missing has_mold field');
+                        }
+                        
+                        if (cleaned.confidence_percent !== undefined) {
+                            console.log('✅ Confidence:', cleaned.confidence_percent + '%');
+                        } else {
+                            console.error('❌ Missing confidence_percent field');
+                        }
+                        
+                        if (cleaned.cost_estimate) {
+                            console.log('✅ Cost estimate:', `$${cleaned.cost_estimate.low} - $${cleaned.cost_estimate.high}`);
+                        } else {
+                            console.error('❌ Missing cost_estimate field');
+                        }
+                        
+                        // Test field validation
+                        console.log('🔍 Testing validateMoldResponse function...');
+                        const validated = validateMoldResponse(cleaned);
+                        console.log('✅ Validated data:', validated);
+                        
+                        // Check if all required fields are present after validation
+                        const requiredFields = [
+                            'has_mold', 'confidence_percent', 'condition_level',
+                            'square_footage', 'containment_level', 'health_risk',
+                            'cost_estimate', 'days_required', 'requires_testing'
+                        ];
+                        
+                        const missingAfterValidation = requiredFields.filter(field => 
+                            validated[field] === undefined || validated[field] === null
+                        );
+                        
+                        if (missingAfterValidation.length === 0) {
+                            console.log('✅ All required fields present after validation');
+                        } else {
+                            console.error('❌ Still missing fields after validation:', missingAfterValidation);
+                        }
+                        
+                    } else {
+                        console.error('❌ Failed to parse response as JSON');
+                    }
+                } catch (e) {
+                    console.error('❌ Failed to validate response:', e);
+                }
+                
+                console.log('✨ Test complete!');
+                
+            } catch (error) {
+                console.error('❌ Test failed:', error);
+            }
+        }
+        
         // Initialize
         console.log('FieldQuote Pro Ready - Manual Override Version');
         
         // Check API key
         if (API_KEY === 'YOUR_API_KEY_HERE') {
             console.log('Note: Add Gemini API key for future AI features');
+            console.log('To test Gemini responses, add your API key and run: testGeminiResponse()');
+        } else {
+            console.log('API key configured. Testing commands available:');
+            console.log('  testGeminiResponse() - Test with synthetic image');
+            console.log('  testGeminiWithImage(file) - Test with your own image file');
+            console.log('');
+            console.log('Example: ');
+            console.log('  const input = document.createElement("input");');
+            console.log('  input.type = "file";');
+            console.log('  input.accept = "image/*";');
+            console.log('  input.onchange = (e) => testGeminiWithImage(e.target.files[0]);');
+            console.log('  input.click();');
         }
     </script>
 </body>

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:\\Users\\kevin\\fieldquote-v2/**)",
+      "Read(C:\\Users\\kevin\\fieldquote-v2/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

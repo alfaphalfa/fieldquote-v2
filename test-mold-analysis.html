@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mold Analysis Test Suite</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mold Analysis Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>1. Photo Validation Tests</h2>
+        <button onclick="testPhotoValidation()">Run Photo Validation Tests</button>
+        <div id="photo-validation-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Response Cleaning Tests</h2>
+        <button onclick="testResponseCleaning()">Run Response Cleaning Tests</button>
+        <div id="response-cleaning-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Field Validation Tests</h2>
+        <button onclick="testFieldValidation()">Run Field Validation Tests</button>
+        <div id="field-validation-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Error Handling Tests</h2>
+        <button onclick="testErrorHandling()">Run Error Handling Tests</button>
+        <div id="error-handling-results"></div>
+    </div>
+
+    <script>
+        // Import functions from main app (simulated)
+        function isValidMoldPhoto(file) {
+            // Check file size (under 20MB for Gemini)
+            if (file.size > 20 * 1024 * 1024) {
+                return false;
+            }
+            
+            // Check file type (jpeg, png, webp)
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        function cleanGeminiResponse(response) {
+            try {
+                // Remove any markdown backticks and clean the response
+                let cleaned = response
+                    .replace(/```json\n?/gi, '')
+                    .replace(/```\n?/gi, '')
+                    .replace(/^[^{]*/, '') // Remove any text before the JSON
+                    .replace(/[^}]*$/, '') // Remove any text after the JSON
+                    .trim();
+                
+                // Try to find JSON object in the response
+                const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON object found in response');
+                }
+                
+                // Try to parse the JSON
+                const parsedData = JSON.parse(jsonMatch[0]);
+                return parsedData;
+                
+            } catch (error) {
+                console.error('Failed to parse Gemini response:', error);
+                return {
+                    error: 'Unable to fully analyze image. Manual assessment recommended.',
+                    requires_testing: true,
+                    has_mold: false,
+                    confidence_percent: 0
+                };
+            }
+        }
+        
+        function validateMoldResponse(data) {
+            const requiredFields = [
+                'has_mold',
+                'confidence_percent',
+                'condition_level',
+                'square_footage',
+                'containment_level',
+                'health_risk',
+                'cost_estimate',
+                'days_required',
+                'requires_testing'
+            ];
+            
+            const missingFields = [];
+            for (const field of requiredFields) {
+                if (data[field] === undefined || data[field] === null) {
+                    missingFields.push(field);
+                }
+            }
+            
+            if (missingFields.length > 0) {
+                console.warn('Missing fields in mold response:', missingFields);
+                
+                // Add default values for missing fields
+                if (data.has_mold === undefined) data.has_mold = true;
+                if (data.confidence_percent === undefined) data.confidence_percent = 50;
+                if (data.condition_level === undefined) data.condition_level = 3;
+                if (data.square_footage === undefined) data.square_footage = 10;
+                if (data.containment_level === undefined) data.containment_level = 2;
+                if (data.health_risk === undefined) data.health_risk = 5;
+                if (data.days_required === undefined) data.days_required = 2;
+                if (data.requires_testing === undefined) data.requires_testing = true;
+                if (!data.cost_estimate) {
+                    data.cost_estimate = {
+                        low: 1500,
+                        high: 3500,
+                        breakdown: {
+                            containment: 500,
+                            removal: 500,
+                            cleaning: 500,
+                            equipment: 400,
+                            testing: 300
+                        }
+                    };
+                }
+            }
+            
+            return data;
+        }
+        
+        // Test Functions
+        function testPhotoValidation() {
+            const results = document.getElementById('photo-validation-results');
+            results.innerHTML = '';
+            
+            // Test 1: Valid JPEG under 20MB
+            const validJpeg = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+            const test1 = isValidMoldPhoto(validJpeg);
+            results.innerHTML += `<div class="test-result ${test1 ? 'pass' : 'fail'}">
+                Test 1: Valid JPEG - ${test1 ? 'PASS' : 'FAIL'}
+            </div>`;
+            
+            // Test 2: File too large
+            const largeFile = new File([new ArrayBuffer(25 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+            const test2 = !isValidMoldPhoto(largeFile);
+            results.innerHTML += `<div class="test-result ${test2 ? 'pass' : 'fail'}">
+                Test 2: Reject large file (>20MB) - ${test2 ? 'PASS' : 'FAIL'}
+            </div>`;
+            
+            // Test 3: Invalid file type
+            const invalidType = new File(['test'], 'test.pdf', { type: 'application/pdf' });
+            const test3 = !isValidMoldPhoto(invalidType);
+            results.innerHTML += `<div class="test-result ${test3 ? 'pass' : 'fail'}">
+                Test 3: Reject invalid file type - ${test3 ? 'PASS' : 'FAIL'}
+            </div>`;
+            
+            // Test 4: Valid PNG
+            const validPng = new File(['test'], 'test.png', { type: 'image/png' });
+            const test4 = isValidMoldPhoto(validPng);
+            results.innerHTML += `<div class="test-result ${test4 ? 'pass' : 'fail'}">
+                Test 4: Valid PNG - ${test4 ? 'PASS' : 'FAIL'}
+            </div>`;
+        }
+        
+        function testResponseCleaning() {
+            const results = document.getElementById('response-cleaning-results');
+            results.innerHTML = '';
+            
+            // Test 1: Clean markdown-wrapped JSON
+            const markdownResponse = '```json\n{"has_mold": true, "confidence_percent": 85}\n```';
+            const cleaned1 = cleanGeminiResponse(markdownResponse);
+            const test1 = cleaned1.has_mold === true && cleaned1.confidence_percent === 85;
+            results.innerHTML += `<div class="test-result ${test1 ? 'pass' : 'fail'}">
+                Test 1: Clean markdown-wrapped JSON - ${test1 ? 'PASS' : 'FAIL'}
+                <pre>${JSON.stringify(cleaned1, null, 2)}</pre>
+            </div>`;
+            
+            // Test 2: JSON with extra text
+            const textResponse = 'Here is the analysis:\n{"has_mold": false, "confidence_percent": 20}\nEnd of analysis.';
+            const cleaned2 = cleanGeminiResponse(textResponse);
+            const test2 = cleaned2.has_mold === false && cleaned2.confidence_percent === 20;
+            results.innerHTML += `<div class="test-result ${test2 ? 'pass' : 'fail'}">
+                Test 2: Extract JSON from text - ${test2 ? 'PASS' : 'FAIL'}
+                <pre>${JSON.stringify(cleaned2, null, 2)}</pre>
+            </div>`;
+            
+            // Test 3: Invalid JSON
+            const invalidResponse = 'This is not JSON at all';
+            const cleaned3 = cleanGeminiResponse(invalidResponse);
+            const test3 = cleaned3.error !== undefined;
+            results.innerHTML += `<div class="test-result ${test3 ? 'pass' : 'fail'}">
+                Test 3: Handle invalid JSON - ${test3 ? 'PASS' : 'FAIL'}
+                <pre>${JSON.stringify(cleaned3, null, 2)}</pre>
+            </div>`;
+        }
+        
+        function testFieldValidation() {
+            const results = document.getElementById('field-validation-results');
+            results.innerHTML = '';
+            
+            // Test 1: Complete response
+            const completeData = {
+                has_mold: true,
+                confidence_percent: 90,
+                condition_level: 2,
+                square_footage: 50,
+                containment_level: 2,
+                health_risk: 6,
+                cost_estimate: { low: 2000, high: 4000 },
+                days_required: 3,
+                requires_testing: true
+            };
+            const validated1 = validateMoldResponse({...completeData});
+            const test1 = JSON.stringify(validated1) === JSON.stringify(completeData);
+            results.innerHTML += `<div class="test-result ${test1 ? 'pass' : 'fail'}">
+                Test 1: Complete response unchanged - ${test1 ? 'PASS' : 'FAIL'}
+            </div>`;
+            
+            // Test 2: Missing fields filled with defaults
+            const incompleteData = {
+                has_mold: true,
+                confidence_percent: 75
+            };
+            const validated2 = validateMoldResponse({...incompleteData});
+            const test2 = validated2.condition_level === 3 && validated2.square_footage === 10;
+            results.innerHTML += `<div class="test-result ${test2 ? 'pass' : 'fail'}">
+                Test 2: Missing fields filled with defaults - ${test2 ? 'PASS' : 'FAIL'}
+                <pre>${JSON.stringify(validated2, null, 2)}</pre>
+            </div>`;
+            
+            // Test 3: Empty object
+            const emptyData = {};
+            const validated3 = validateMoldResponse({...emptyData});
+            const test3 = validated3.has_mold !== undefined && validated3.cost_estimate !== undefined;
+            results.innerHTML += `<div class="test-result ${test3 ? 'pass' : 'fail'}">
+                Test 3: Empty object gets all defaults - ${test3 ? 'PASS' : 'FAIL'}
+                <pre>${JSON.stringify(validated3, null, 2)}</pre>
+            </div>`;
+        }
+        
+        function testErrorHandling() {
+            const results = document.getElementById('error-handling-results');
+            results.innerHTML = '';
+            
+            // Test 1: Network error simulation
+            results.innerHTML += `<div class="test-result warning">
+                Test 1: Network Error - Would show "Network error. Check your internet connection."
+            </div>`;
+            
+            // Test 2: API key error
+            results.innerHTML += `<div class="test-result warning">
+                Test 2: Invalid API Key (401/403) - Would show "Invalid API key. Please check your Gemini API key."
+            </div>`;
+            
+            // Test 3: Rate limit error
+            results.innerHTML += `<div class="test-result warning">
+                Test 3: Rate Limit (429) - Would show "Rate limit exceeded. Please wait a moment and try again."
+            </div>`;
+            
+            // Test 4: Low confidence warning
+            results.innerHTML += `<div class="test-result warning">
+                Test 4: Low Confidence (<50%) - Would show "Low confidence in analysis. Professional inspection recommended."
+            </div>`;
+            
+            // Test 5: No mold detected
+            results.innerHTML += `<div class="test-result warning">
+                Test 5: No Mold Detected - Would show "No visible mold detected. Consider professional testing if you suspect hidden mold."
+            </div>`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RestoreDoc - IICRC S520 Mold Remediation Assessment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .standards-badge {
+            display: inline-block;
+            background: white;
+            color: #764ba2;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-zone:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+
+        .upload-zone.active {
+            background: #e1e6ff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .analyze-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .analyze-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .condition-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .condition-1 { background: #4ade80; color: white; }
+        .condition-2 { background: #fbbf24; color: #333; }
+        .condition-3 { background: #ef4444; color: white; }
+
+        .species-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #f3f4f6;
+            border-radius: 15px;
+            margin: 5px;
+            font-size: 0.9rem;
+        }
+
+        .high-risk { background: #fee2e2; color: #dc2626; }
+        .moderate-risk { background: #fef3c7; color: #d97706; }
+        .low-risk { background: #dbeafe; color: #2563eb; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .info-item {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .line-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .line-items-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .line-items-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .line-items-table tr:hover {
+            background: #f8f9ff;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background: #f3f4f6;
+            font-size: 1.1rem;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning-title {
+            color: #dc2626;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .warning-item {
+            color: #7f1d1d;
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .warning-item:before {
+            content: "⚠️";
+            position: absolute;
+            left: 0;
+        }
+
+        .compliance-box {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15captures 0;
+        }
+
+        .compliance-title {
+            color: #16a34a;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .compliance-item {
+            color: #14532d;
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .compliance-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .test-scenarios {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .test-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .test-button:hover {
+            background: #4f46e5;
+        }
+
+        /* Estimate Adjuster Styles */
+        .adjuster-panel {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 2px solid #667eea;
+        }
+
+        .adjuster-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .slider-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .slider-input {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            margin: 10px 0;
+        }
+
+        .slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .slider-input::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .slider-marks {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .adjusted-total-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .total-original {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .total-adjusted {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        .total-difference {
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        .difference-positive {
+            color: #dc2626;
+        }
+
+        .difference-negative {
+            color: #16a34a;
+        }
+
+        .category-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .category-item {
+            text-align: center;
+        }
+
+        .category-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .category-value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .reset-button {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .reset-button:hover {
+            background: #4b5563;
+        }
+
+        .adjuster-hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 RestoreDoc Mold Assessment</h1>
+            <p>Professional Mold Remediation Analysis for Major Restoration Services</p>
+            <div class="standards-badge">IICRC S520-2024 Compliant</div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2 class="card-title">📸 Upload Mold Damage Photo</h2>
+                
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📁</div>
+                    <p><strong>Click to upload or drag & drop</strong></p>
+                    <p style="margin-top: 10px; color: #666;">Supported: JPG, PNG, WebP (Max 10MB)</p>
+                </div>
+                
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                
+                <div class="preview-container" id="previewContainer" style="display: none;">
+                    <img id="previewImage" class="preview-image" alt="Preview">
+                </div>
+                
+                <button id="analyzeButton" class="analyze-button" style="display: none;">
+                    🔬 Analyze Mold Damage
+                </button>
+
+                <div class="loading-spinner" id="loadingSpinner">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #666;">Analyzing mold damage...</p>
+                </div>
+
+                <div class="error-message" id="errorMessage"></div>
+
+                <div class="test-scenarios">
+                    <h3 style="margin-bottom: 10px;">Test Scenarios</h3>
+                    <button class="test-button" onclick="loadTestScenario('bathroom')">Small Bathroom</button>
+                    <button class="test-button" onclick="loadTestScenario('basement')">Basement Black Mold</button>
+                    <button class="test-button" onclick="loadTestScenario('attic')">Attic Sheathing</button>
+                    <button class="test-button" onclick="loadTestScenario('hvac')">HVAC System</button>
+                    <button class="test-button" onclick="loadTestScenario('settled')">Settled Spores Only</button>
+                </div>
+            </div>
+
+            <div class="card results-section" id="resultsSection">
+                <h2 class="card-title">📊 Mold Assessment Results</h2>
+                
+                <div id="conditionInfo"></div>
+                <div id="speciesInfo"></div>
+                <div id="roomInfo"></div>
+                <div id="moistureInfo"></div>
+                <div id="equipmentInfo"></div>
+                <div id="warningsInfo"></div>
+                <div id="complianceInfo"></div>
+            </div>
+        </div>
+
+        <div class="card results-section" id="estimateSection">
+            <h2 class="card-title">💰 Detailed Estimate</h2>
+            <div id="lineItemsContainer"></div>
+            
+            <!-- Estimate Adjuster Panel -->
+            <div class="adjuster-panel adjuster-hidden" id="adjusterPanel">
+                <h3 class="adjuster-title">🎛️ Adjust Estimate</h3>
+                
+                <!-- Labor Rate Slider -->
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Labor Rate Adjustment</span>
+                        <span class="slider-value" id="laborValue">100%</span>
+                    </div>
+                    <input type="range" 
+                           class="slider-input" 
+                           id="laborSlider"
+                           min="0.5" 
+                           max="2.0" 
+                           step="0.1"
+                           value="1.0">
+                    <div class="slider-marks">
+                        <span>Half Rate</span>
+                        <span>Standard</span>
+                        <span>Double Rate</span>
+                    </div>
+                </div>
+
+                <!-- Equipment Days Slider -->
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Equipment Days</span>
+                        <span class="slider-value" id="daysValue">3 days</span>
+                    </div>
+                    <input type="range" 
+                           class="slider-input" 
+                           id="daysSlider"
+                           min="0.33" 
+                           max="3.0" 
+                           step="0.33"
+                           value="1.0">
+                    <div class="slider-marks">
+                        <span>1 day</span>
+                        <span>3 days</span>
+                        <span>9 days</span>
+                    </div>
+                </div>
+
+                <!-- Materials Cost Slider -->
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Materials Cost</span>
+                        <span class="slider-value" id="materialsValue">100%</span>
+                    </div>
+                    <input type="range" 
+                           class="slider-input" 
+                           id="materialsSlider"
+                           min="0.8" 
+                           max="1.5" 
+                           step="0.1"
+                           value="1.0">
+                    <div class="slider-marks">
+                        <span>Discount</span>
+                        <span>Standard</span>
+                        <span>Premium</span>
+                    </div>
+                </div>
+
+                <!-- Adjusted Total Display -->
+                <div class="adjusted-total-box">
+                    <div class="total-original" id="originalTotal">Original: $0.00</div>
+                    <div class="total-adjusted" id="adjustedTotal">Adjusted: $0.00</div>
+                    <div class="total-difference" id="totalDifference">Difference: $0.00</div>
+                    
+                    <div class="category-breakdown">
+                        <div class="category-item">
+                            <div class="category-label">Labor</div>
+                            <div class="category-value" id="laborTotal">$0</div>
+                        </div>
+                        <div class="category-item">
+                            <div class="category-label">Equipment</div>
+                            <div class="category-value" id="equipmentTotal">$0</div>
+                        </div>
+                        <div class="category-item">
+                            <div class="category-label">Materials</div>
+                            <div class="category-value" id="materialsTotal">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="reset-button" id="resetButton">Reset to Original</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/mold-analysis.js"></script>
+    <script>
+        // API Key configuration
+        window.API_KEY = 'AIzaSyD5Gp9wwCeFiJou6DCUQ7S6M-C-UYt_3JQ';
+
+        let selectedFile = null;
+
+        // File upload handling
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const analyzeButton = document.getElementById('analyzeButton');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('active');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('active');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('active');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size must be less than 10MB');
+                return;
+            }
+
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload an image file');
+                return;
+            }
+
+            selectedFile = file;
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewContainer.style.display = 'block';
+                analyzeButton.style.display = 'block';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        analyzeButton.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('Please select an image first');
+                return;
+            }
+
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            analyzeButton.disabled = true;
+            loadingSpinner.classList.add('active');
+            errorMessage.classList.remove('active');
+
+            try {
+                const result = await analyzeMoldDamage(selectedFile);
+                displayResults(result);
+            } catch (error) {
+                showError('Analysis failed: ' + error.message);
+            } finally {
+                analyzeButton.disabled = false;
+                loadingSpinner.classList.remove('active');
+            }
+        });
+
+        function displayResults(result) {
+            // Show results sections
+            document.getElementById('resultsSection').classList.add('active');
+            document.getElementById('estimateSection').classList.add('active');
+            
+            // Store line items and initialize adjuster
+            if (result.lineItems) {
+                currentLineItems = result.lineItems;
+                currentEstimateAdjuster = new EstimateAdjuster(result);
+                document.getElementById('adjusterPanel').classList.remove('adjuster-hidden');
+            }
+
+            // Display condition
+            const conditionHtml = `
+                <div class="condition-badge condition-${result.condition}">
+                    Condition ${result.condition}: ${result.conditionName}
+                </div>
+                <p style="margin-top: 10px;">Level ${result.level} Contamination</p>
+                <p><strong>Affected Area:</strong> ${result.affectedArea}</p>
+            `;
+            document.getElementById('conditionInfo').innerHTML = conditionHtml;
+
+            // Display species
+            if (result.species && result.species.identified) {
+                const speciesHtml = `
+                    <h3 style="margin: 20px 0 10px;">Identified Species</h3>
+                    ${result.species.identified.map(s => 
+                        `<span class="species-tag ${result.species.riskLevel.toLowerCase()}-risk">${s}</span>`
+                    ).join('')}
+                    <p style="margin-top: 10px;">${result.species.characteristics}</p>
+                `;
+                document.getElementById('speciesInfo').innerHTML = speciesHtml;
+            }
+
+            // Display room info
+            if (result.roomDimensions) {
+                const roomHtml = `
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Room Dimensions</div>
+                            <div class="info-value">${result.roomDimensions.length}' × ${result.roomDimensions.width}' × ${result.roomDimensions.height}'</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Cubic Feet</div>
+                            <div class="info-value">${result.roomDimensions.cubicFeet.toLocaleString()} ft³</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('roomInfo').innerHTML = roomHtml;
+            }
+
+            // Display moisture source
+            if (result.moistureSource) {
+                const moistureHtml = `
+                    <h3 style="margin: 20px 0 10px;">Moisture Source</h3>
+                    <div class="info-item">
+                        <div class="info-label">${result.moistureSource.type}</div>
+                        <div class="info-value">${result.moistureSource.description}</div>
+                    </div>
+                `;
+                document.getElementById('moistureInfo').innerHTML = moistureHtml;
+            }
+
+            // Display equipment needs
+            if (result.equipment) {
+                const equipmentHtml = `
+                    <h3 style="margin: 20px 0 10px;">Equipment Required</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Air Scrubbers</div>
+                            <div class="info-value">${result.equipment.airScrubbers} units</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Negative Air</div>
+                            <div class="info-value">${result.equipment.negativeAir} units</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Duration</div>
+                            <div class="info-value">${result.equipment.days} days</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('equipmentInfo').innerHTML = equipmentHtml;
+            }
+
+            // Display warnings
+            if (result.healthWarnings && result.healthWarnings.length > 0) {
+                const warningsHtml = `
+                    <div class="warning-box">
+                        <div class="warning-title">⚠️ Health & Safety Warnings</div>
+                        ${result.healthWarnings.map(w => 
+                            `<div class="warning-item">${w}</div>`
+                        ).join('')}
+                    </div>
+                `;
+                document.getElementById('warningsInfo').innerHTML = warningsHtml;
+            }
+
+            // Display compliance notes
+            if (result.complianceNotes && result.complianceNotes.length > 0) {
+                const complianceHtml = `
+                    <div class="compliance-box">
+                        <div class="compliance-title">Compliance Requirements</div>
+                        ${result.complianceNotes.map(c => 
+                            `<div class="compliance-item">${c}</div>`
+                        ).join('')}
+                    </div>
+                `;
+                document.getElementById('complianceInfo').innerHTML = complianceHtml;
+            }
+
+            // Display line items
+            if (result.lineItems && result.lineItems.length > 0) {
+                const tableHtml = `
+                    <table class="line-items-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${result.lineItems.map(item => `
+                                <tr>
+                                    <td>${item.description}</td>
+                                    <td>${item.quantity} ${item.unit}</td>
+                                    <td>$${item.unitPrice.toFixed(2)}</td>
+                                    <td>$${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row">
+                                <td colspan="3">Total Estimate</td>
+                                <td>$${result.totalEstimate.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 15px;"><strong>Timeline:</strong> ${result.timeline}</p>
+                `;
+                document.getElementById('lineItemsContainer').innerHTML = tableHtml;
+            }
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            setTimeout(() => {
+                errorMessage.classList.remove('active');
+            }, 5000);
+        }
+
+        // Initialize estimate adjuster
+        let currentEstimateAdjuster = null;
+        let currentLineItems = [];
+
+        // Setup slider event listeners
+        function initializeAdjuster() {
+            const laborSlider = document.getElementById('laborSlider');
+            const daysSlider = document.getElementById('daysSlider');
+            const materialsSlider = document.getElementById('materialsSlider');
+            const resetButton = document.getElementById('resetButton');
+
+            // Labor slider
+            laborSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('laborValue').textContent = `${(value * 100).toFixed(0)}%`;
+                if (currentEstimateAdjuster) {
+                    currentEstimateAdjuster.setLaborMultiplier(value);
+                    updateAdjustedEstimate();
+                }
+            });
+
+            // Days slider
+            daysSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                const baseDays = 3; // Default equipment rental period
+                const adjustedDays = Math.round(baseDays * value);
+                document.getElementById('daysValue').textContent = `${adjustedDays} day${adjustedDays !== 1 ? 's' : ''}`;
+                if (currentEstimateAdjuster) {
+                    currentEstimateAdjuster.setDaysMultiplier(value);
+                    updateAdjustedEstimate();
+                }
+            });
+
+            // Materials slider
+            materialsSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('materialsValue').textContent = `${(value * 100).toFixed(0)}%`;
+                if (currentEstimateAdjuster) {
+                    currentEstimateAdjuster.setMaterialsMultiplier(value);
+                    updateAdjustedEstimate();
+                }
+            });
+
+            // Reset button
+            resetButton.addEventListener('click', () => {
+                laborSlider.value = 1.0;
+                daysSlider.value = 1.0;
+                materialsSlider.value = 1.0;
+                
+                document.getElementById('laborValue').textContent = '100%';
+                document.getElementById('daysValue').textContent = '3 days';
+                document.getElementById('materialsValue').textContent = '100%';
+                
+                if (currentEstimateAdjuster) {
+                    currentEstimateAdjuster.setLaborMultiplier(1.0);
+                    currentEstimateAdjuster.setDaysMultiplier(1.0);
+                    currentEstimateAdjuster.setMaterialsMultiplier(1.0);
+                    updateAdjustedEstimate();
+                }
+            });
+        }
+
+        // Update the adjusted estimate display
+        function updateAdjustedEstimate() {
+            if (!currentEstimateAdjuster || !currentLineItems.length) return;
+
+            const summary = currentEstimateAdjuster.getAdjustmentSummary(currentLineItems);
+            const categoryTotals = currentEstimateAdjuster.getCategoryTotals(currentLineItems);
+            
+            // Calculate adjusted category totals
+            const adjustedLabor = categoryTotals.laborCost * currentEstimateAdjuster.laborMultiplier;
+            const adjustedEquipment = categoryTotals.equipmentCost * currentEstimateAdjuster.daysMultiplier;
+            const adjustedMaterials = categoryTotals.materialsCost * currentEstimateAdjuster.materialsMultiplier;
+
+            // Update display
+            document.getElementById('originalTotal').textContent = 
+                `Original: $${summary.originalTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            document.getElementById('adjustedTotal').textContent = 
+                `Adjusted: $${summary.adjustedTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            const differenceEl = document.getElementById('totalDifference');
+            const difference = summary.difference;
+            differenceEl.textContent = 
+                `Difference: ${difference >= 0 ? '+' : ''}$${Math.abs(difference).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${difference >= 0 ? '+' : ''}${summary.percentChange}%)`;
+            
+            // Add color coding for difference
+            differenceEl.className = difference > 0 ? 'total-difference difference-positive' : 
+                                    difference < 0 ? 'total-difference difference-negative' : 
+                                    'total-difference';
+
+            // Update category breakdowns
+            document.getElementById('laborTotal').textContent = 
+                `$${adjustedLabor.toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+            document.getElementById('equipmentTotal').textContent = 
+                `$${adjustedEquipment.toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+            document.getElementById('materialsTotal').textContent = 
+                `$${adjustedMaterials.toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+
+            // Update line items table with adjusted values
+            const adjustedItems = currentEstimateAdjuster.getAdjustedLineItems(currentLineItems);
+            updateLineItemsTable(adjustedItems, summary.adjustedTotal);
+        }
+
+        // Update line items table with adjusted values
+        function updateLineItemsTable(lineItems, totalEstimate) {
+            const tableHtml = `
+                <table class="line-items-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${lineItems.map(item => {
+                            const isAdjusted = item.adjusted && (
+                                (item.category === 'labor' && currentEstimateAdjuster.laborMultiplier !== 1) ||
+                                (item.category === 'equipment' && currentEstimateAdjuster.daysMultiplier !== 1) ||
+                                (item.category === 'materials' && currentEstimateAdjuster.materialsMultiplier !== 1)
+                            );
+                            return `
+                                <tr style="${isAdjusted ? 'background: #fef3c7;' : ''}">
+                                    <td>${item.description} ${isAdjusted ? '📝' : ''}</td>
+                                    <td>${item.quantity} ${item.unit}</td>
+                                    <td>$${item.unitPrice.toFixed(2)}</td>
+                                    <td>$${item.total.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                        <tr class="total-row">
+                            <td colspan="3">Total Estimate</td>
+                            <td>$${totalEstimate.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('lineItemsContainer').innerHTML = tableHtml;
+        }
+
+        // Initialize adjuster on page load
+        initializeAdjuster();
+
+        // Test scenario loader
+        async function loadTestScenario(scenario) {
+            const testImages = {
+                bathroom: 'https://via.placeholder.com/800x600/2d3748/ffffff?text=Small+Bathroom+Mold',
+                basement: 'https://via.placeholder.com/800x600/1a202c/ffffff?text=Basement+Black+Mold+50sqft',
+                attic: 'https://via.placeholder.com/800x600/4a5568/ffffff?text=Attic+Mold+on+Sheathing',
+                hvac: 'https://via.placeholder.com/800x600/718096/ffffff?text=HVAC+System+Contamination',
+                settled: 'https://via.placeholder.com/800x600/cbd5e0/333333?text=Settled+Spores+No+Growth'
+            };
+
+            const mockResults = {
+                bathroom: {
+                    condition: 3,
+                    conditionName: "Actual Mold Growth",
+                    level: 1,
+                    affectedArea: "8 sq ft",
+                    roomDimensions: { length: 8, width: 6, height: 8, cubicFeet: 384 },
+                    species: {
+                        identified: ["Cladosporium", "Aspergillus"],
+                        characteristics: "Green-black patches with fuzzy texture",
+                        riskLevel: "MODERATE"
+                    },
+                    moistureSource: {
+                        type: "Plumbing leak",
+                        description: "Leaking supply line under sink",
+                        repairRequired: true
+                    },
+                    equipment: { airScrubbers: 1, negativeAir: 0, dehumidifiers: 1, days: 2 },
+                    healthWarnings: ["Ensure proper ventilation during work"],
+                    complianceNotes: ["Level 1 - Basic PPE required"],
+                    lineItems: [
+                        { description: "Initial assessment", quantity: 1, unit: "visit", unitPrice: 350, total: 350 },
+                        { description: "HEPA vacuum surfaces", quantity: 48, unit: "sq ft", unitPrice: 1.25, total: 60 },
+                        { description: "Remove contaminated drywall", quantity: 8, unit: "sq ft", unitPrice: 4, total: 32 },
+                        { description: "Antimicrobial treatment", quantity: 48, unit: "sq ft", unitPrice: 2, total: 96 },
+                        { description: "Air scrubber rental", quantity: 2, unit: "days", unitPrice: 175, total: 350 },
+                        { description: "Labor", quantity: 4, unit: "hours", unitPrice: 95, total: 380 }
+                    ],
+                    totalEstimate: 1268,
+                    timeline: "2 days"
+                },
+                basement: {
+                    condition: 3,
+                    conditionName: "Actual Mold Growth",
+                    level: 3,
+                    affectedArea: "50 sq ft",
+                    roomDimensions: { length: 20, width: 15, height: 8, cubicFeet: 2400 },
+                    species: {
+                        identified: ["Stachybotrys", "Chaetomium"],
+                        characteristics: "Black slimy growth with musty odor",
+                        riskLevel: "HIGH"
+                    },
+                    moistureSource: {
+                        type: "Foundation seepage",
+                        description: "Water infiltration through foundation wall",
+                        repairRequired: true
+                    },
+                    equipment: { airScrubbers: 2, negativeAir: 1, dehumidifiers: 2, days: 5 },
+                    healthWarnings: [
+                        "Black mold detected - enhanced PPE required",
+                        "Requires N95 minimum, full-face preferred"
+                    ],
+                    complianceNotes: [
+                        "Level 3 - Full containment required",
+                        "Post-remediation verification mandatory"
+                    ],
+                    lineItems: [
+                        { description: "Initial assessment & testing", quantity: 1, unit: "visit", unitPrice: 500, total: 500 },
+                        { description: "Full containment setup", quantity: 1, unit: "zone", unitPrice: 500, total: 500 },
+                        { description: "Remove contaminated materials", quantity: 50, unit: "sq ft", unitPrice: 5, total: 250 },
+                        { description: "HEPA vacuum all surfaces", quantity: 300, unit: "sq ft", unitPrice: 1.50, total: 450 },
+                        { description: "Wire brush affected framing", quantity: 40, unit: "linear ft", unitPrice: 4, total: 160 },
+                        { description: "Antimicrobial application", quantity: 300, unit: "sq ft", unitPrice: 3, total: 900 },
+                        { description: "Air scrubbers (2 units)", quantity: 5, unit: "days", unitPrice: 350, total: 1750 },
+                        { description: "Negative air machine", quantity: 5, unit: "days", unitPrice: 200, total: 1000 },
+                        { description: "Post-remediation verification", quantity: 1, unit: "test", unitPrice: 500, total: 500 },
+                        { description: "Labor", quantity: 24, unit: "hours", unitPrice: 95, total: 2280 }
+                    ],
+                    totalEstimate: 8290,
+                    timeline: "5 days"
+                }
+            };
+
+            // Display test scenario
+            const result = mockResults[scenario] || mockResults.bathroom;
+            displayResults(result);
+            
+            // Update preview with placeholder
+            previewImage.src = testImages[scenario];
+            previewContainer.style.display = 'block';
+            
+            // Initialize adjuster for test scenario
+            if (result.lineItems) {
+                currentLineItems = result.lineItems;
+                currentEstimateAdjuster = new EstimateAdjuster(result);
+                document.getElementById('adjusterPanel').classList.remove('adjuster-hidden');
+                updateAdjustedEstimate();
+            }
+        }
+    </script>
+</body>
+</html>

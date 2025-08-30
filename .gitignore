@@ -1,3 +1,25 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Generated files
+generated_pdfs/
+temp_uploads/
+
 # Local Netlify folder
 .netlify
 .netlify/state.json
@@ -9,3 +31,23 @@ Thumbs.db
 # IDE Files
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+test_*.pdf
+*.backup
+
+# Node modules (if using Next.js alongside)
+node_modules/
+
+# Build outputs
+dist/
+build/
