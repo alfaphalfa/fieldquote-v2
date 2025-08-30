@@ -677,6 +677,7 @@
         let uploadedPhotos = [];
         let currentEstimate = null;
         let currentAnalysis = null;  // Store AI analysis results
+        let currentLineItems = [];  // Store line items from analysis
         let editMode = false;
         let lineItems = [];
         let originalTotal = 0;
@@ -731,7 +732,7 @@
 
             // Mock AI analysis result
             currentEstimate = generateMockEstimate(selectedDamageType);
-            // Set currentAnalysis for PDF generation
+            // Set currentAnalysis and currentLineItems for PDF generation
             currentAnalysis = {
                 damage_type: selectedDamageType,
                 severity: 'moderate',
@@ -739,6 +740,7 @@
                 equipment_needed: [],
                 line_items: currentEstimate.lineItems
             };
+            currentLineItems = currentEstimate.lineItems || [];
             displayEstimate(currentEstimate);
         }
 
@@ -1122,30 +1124,42 @@
         let currentPDFFilename = null;
 
         async function generatePDF() {
-            // Validate estimate data
-            if (!currentAnalysis && !currentEstimate) {
+            // Check if we have analysis data or line items
+            if (!currentAnalysis && !currentLineItems.length && !lineItems.length) {
                 alert('Please generate an estimate first before creating a PDF');
                 showStatus('Please generate an estimate first', 'error');
                 return;
             }
 
-            // If we have currentEstimate but not currentAnalysis, create it
-            if (!currentAnalysis && currentEstimate) {
+            // If we don't have currentAnalysis but have line items, create it
+            if (!currentAnalysis) {
                 currentAnalysis = {
-                    damage_type: selectedDamageType,
+                    damage_type: selectedDamageType || 'water',
                     severity: 'moderate',
                     affected_area_sqft: 500,
                     equipment_needed: [],
-                    line_items: currentEstimate.lineItems
+                    line_items: currentLineItems.length ? currentLineItems : lineItems
                 };
             }
 
-            const customerName = document.getElementById('customer-name').value;
-            const customerAddress = document.getElementById('customer-address').value || document.getElementById('property-address').value;
+            // If currentLineItems is empty but we have lineItems from the table, use those
+            if (!currentLineItems.length && lineItems.length) {
+                currentLineItems = lineItems;
+            }
+
+            // Get customer info with multiple fallbacks
+            const customerName = document.getElementById('customer-name')?.value || 
+                               document.getElementById('customerName')?.value || 
+                               'Customer';
+            const customerAddress = document.getElementById('customer-address')?.value || 
+                                  document.getElementById('property-address')?.value ||
+                                  document.getElementById('customerAddress')?.value ||
+                                  document.getElementById('propertyAddress')?.value ||
+                                  'Property Address';
             
-            if (!customerName || !customerAddress) {
-                alert('Please enter customer name and address');
-                showStatus('Please enter customer name and address', 'error');
+            if (!customerName || customerName === 'Customer') {
+                alert('Please enter customer name');
+                showStatus('Please enter customer name', 'error');
                 return;
             }
 
