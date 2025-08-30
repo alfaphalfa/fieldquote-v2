@@ -499,19 +499,19 @@
                 <h2>Customer Information</h2>
                 <div class="form-group">
                     <label for="customer-name">Customer Name *</label>
-                    <input type="text" id="customer-name" placeholder="John Smith" required>
+                    <input type="text" id="customer-name" name="customerName" placeholder="John Smith" required>
                 </div>
                 <div class="form-group">
                     <label for="customer-email">Email</label>
-                    <input type="email" id="customer-email" placeholder="john@example.com">
+                    <input type="email" id="customer-email" name="customerEmail" placeholder="john@example.com">
                 </div>
                 <div class="form-group">
                     <label for="customer-phone">Phone</label>
-                    <input type="tel" id="customer-phone" placeholder="(555) 123-4567">
+                    <input type="tel" id="customer-phone" name="customerPhone" placeholder="(555) 123-4567">
                 </div>
                 <div class="form-group">
                     <label for="property-address">Property Address *</label>
-                    <input type="text" id="property-address" placeholder="123 Main St, York, PA 17401" required>
+                    <input type="text" id="property-address" name="propertyAddress" placeholder="123 Main St, York, PA 17401" required>
                 </div>
             </div>
 
@@ -671,6 +671,31 @@
         if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
+
+        // Create element ID aliases for compatibility
+        window.addEventListener('DOMContentLoaded', function() {
+            // Map alternative IDs to existing elements
+            const idMappings = {
+                'customerName': 'customer-name',
+                'customerEmail': 'customer-email',
+                'customerPhone': 'customer-phone',
+                'propertyAddress': 'property-address',
+                'customer-address': 'property-address',
+                'customerAddress': 'property-address'
+            };
+            
+            // Store original getElementById
+            const originalGetElementById = document.getElementById.bind(document);
+            
+            // Override getElementById to handle aliases
+            document.getElementById = function(id) {
+                let element = originalGetElementById(id);
+                if (!element && idMappings[id]) {
+                    element = originalGetElementById(idMappings[id]);
+                }
+                return element;
+            };
+        });
 
         // Global state
         let selectedDamageType = null;
@@ -1124,93 +1149,98 @@
         let currentPDFFilename = null;
 
         async function generatePDF() {
-            // Check if we have analysis data or line items
-            if (!currentAnalysis && !currentLineItems.length && !lineItems.length) {
-                alert('Please generate an estimate first before creating a PDF');
-                showStatus('Please generate an estimate first', 'error');
-                return;
+            // Check if we have analysis data
+            if (!currentAnalysis || !currentLineItems || currentLineItems.length === 0) {
+                // Try to use lineItems if available
+                if (lineItems && lineItems.length > 0) {
+                    currentLineItems = lineItems;
+                    if (!currentAnalysis) {
+                        currentAnalysis = {
+                            damage_type: selectedDamageType || 'water',
+                            severity: 'moderate',
+                            affected_area_sqft: 500,
+                            equipment_needed: []
+                        };
+                    }
+                } else {
+                    alert('Please analyze damage photos first before generating a PDF');
+                    return;
+                }
             }
-
-            // If we don't have currentAnalysis but have line items, create it
-            if (!currentAnalysis) {
-                currentAnalysis = {
-                    damage_type: selectedDamageType || 'water',
-                    severity: 'moderate',
-                    affected_area_sqft: 500,
-                    equipment_needed: [],
-                    line_items: currentLineItems.length ? currentLineItems : lineItems
-                };
-            }
-
-            // If currentLineItems is empty but we have lineItems from the table, use those
-            if (!currentLineItems.length && lineItems.length) {
-                currentLineItems = lineItems;
-            }
-
-            // Get customer info with multiple fallbacks
-            const customerName = document.getElementById('customer-name')?.value || 
-                               document.getElementById('customerName')?.value || 
-                               'Customer';
-            const customerAddress = document.getElementById('customer-address')?.value || 
-                                  document.getElementById('property-address')?.value ||
-                                  document.getElementById('customerAddress')?.value ||
-                                  document.getElementById('propertyAddress')?.value ||
-                                  'Property Address';
             
-            if (!customerName || customerName === 'Customer') {
-                alert('Please enter customer name');
-                showStatus('Please enter customer name', 'error');
-                return;
-            }
-
-            showStatus('Generating PDF report...', 'info');
-
+            // Safely get customer info with fallbacks
+            const getElementValue = (id, defaultValue = '') => {
+                const element = document.getElementById(id);
+                return element ? element.value : defaultValue;
+            };
+            
+            const customerInfo = {
+                name: getElementValue('customerName', getElementValue('customer-name', 'Customer')),
+                email: getElementValue('customerEmail', 'contact@example.com'),
+                phone: getElementValue('customerPhone', '555-0000'),
+                address: getElementValue('propertyAddress', getElementValue('property-address', getElementValue('customer-address', 'Address not provided')))
+            };
+            
+            console.log('Generating PDF with:', {
+                hasAnalysis: !!currentAnalysis,
+                lineItemCount: currentLineItems.length,
+                customerInfo: customerInfo
+            });
+            
+            // Calculate total
+            const total = currentLineItems.reduce((sum, item) => {
+                const itemTotal = item.total || (item.quantity * item.unitPrice) || 0;
+                return sum + parseFloat(itemTotal || 0);
+            }, 0);
+            
+            // Call the PDF API
             try {
-                // Prepare estimate data for PDF
-                const estimateData = {
-                    customer_name: customerName,
-                    customer_address: customerAddress,
-                    date: new Date().toLocaleDateString(),
-                    job_number: 'EST-' + Date.now(),
-                    assessment: {
-                        damage_type: currentAnalysis.damage_type || selectedDamageType,
-                        classification: getClassificationFromAnalysis(currentAnalysis),
-                        affected_area: currentAnalysis.affected_area_sqft || 0,
-                        severity: currentAnalysis.severity || 'moderate'
-                    },
-                    line_items: getLineItemsFromTable(),
-                    markup: parseFloat(document.getElementById('markup-input').value) || 0,
-                    equipment: currentAnalysis.equipment_needed || [],
-                    photos: uploadedPhotos.slice(0, 6) // Max 6 photos for PDF
-                };
-
-                // Send request to generate PDF
                 const response = await fetch('/api/generate-pdf', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(estimateData)
+                    body: JSON.stringify({
+                        analysis: currentAnalysis,
+                        lineItems: currentLineItems,
+                        customerInfo: customerInfo,
+                        totalAmount: total,
+                        damageType: currentAnalysis.damage_type || 'water',
+                        customer_name: customerInfo.name,
+                        customer_address: customerInfo.address,
+                        date: new Date().toLocaleDateString(),
+                        job_number: 'EST-' + Date.now()
+                    })
                 });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    currentPDFData = result.pdf_data;
-                    currentPDFFilename = result.filename;
-                    
-                    // Show PDF preview modal
-                    showPDFModal(result.pdf_data);
-                    showStatus('PDF generated successfully!', 'success');
-                    
-                    // Show email button
-                    document.getElementById('email-btn').style.display = 'inline-block';
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `estimate_${Date.now()}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    alert('PDF generated successfully!');
+                    if (typeof showStatus === 'function') {
+                        showStatus('PDF generated successfully!', 'success');
+                    }
                 } else {
-                    showStatus(`Failed to generate PDF: ${result.message}`, 'error');
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    alert('Failed to generate PDF. Server error.');
+                    if (typeof showStatus === 'function') {
+                        showStatus('Failed to generate PDF', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('PDF generation error:', error);
-                showStatus(`Error generating PDF: ${error.message}`, 'error');
+                alert('Error generating PDF. Please check the console for details.');
+                if (typeof showStatus === 'function') {
+                    showStatus(`Error generating PDF: ${error.message}`, 'error');
+                }
             }
         }
 
