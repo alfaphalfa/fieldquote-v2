@@ -676,6 +676,7 @@
         let selectedDamageType = null;
         let uploadedPhotos = [];
         let currentEstimate = null;
+        let currentAnalysis = null;  // Store AI analysis results
         let editMode = false;
         let lineItems = [];
         let originalTotal = 0;
@@ -730,6 +731,14 @@
 
             // Mock AI analysis result
             currentEstimate = generateMockEstimate(selectedDamageType);
+            // Set currentAnalysis for PDF generation
+            currentAnalysis = {
+                damage_type: selectedDamageType,
+                severity: 'moderate',
+                affected_area_sqft: 500,
+                equipment_needed: [],
+                line_items: currentEstimate.lineItems
+            };
             displayEstimate(currentEstimate);
         }
 
@@ -1114,15 +1123,28 @@
 
         async function generatePDF() {
             // Validate estimate data
-            if (!currentAnalysis) {
-                showStatus('Please analyze damage photos first', 'error');
+            if (!currentAnalysis && !currentEstimate) {
+                alert('Please generate an estimate first before creating a PDF');
+                showStatus('Please generate an estimate first', 'error');
                 return;
             }
 
+            // If we have currentEstimate but not currentAnalysis, create it
+            if (!currentAnalysis && currentEstimate) {
+                currentAnalysis = {
+                    damage_type: selectedDamageType,
+                    severity: 'moderate',
+                    affected_area_sqft: 500,
+                    equipment_needed: [],
+                    line_items: currentEstimate.lineItems
+                };
+            }
+
             const customerName = document.getElementById('customer-name').value;
-            const customerAddress = document.getElementById('customer-address').value;
+            const customerAddress = document.getElementById('customer-address').value || document.getElementById('property-address').value;
             
             if (!customerName || !customerAddress) {
+                alert('Please enter customer name and address');
                 showStatus('Please enter customer name and address', 'error');
                 return;
             }
