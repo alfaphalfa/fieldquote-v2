@@ -112,6 +112,70 @@ def mock_analyze():
         }
     })
 
+@app.route('/api/generate-pdf', methods=['POST'])
+def generate_pdf():
+    """Generate PDF from estimate data"""
+    try:
+        data = request.json
+        
+        # Check if PDF generator is available
+        if not HAS_PDF:
+            # If no PDF generator, return a simple HTML response
+            return jsonify({
+                'error': 'PDF generation not available',
+                'message': 'PDF library not installed'
+            }), 501
+        
+        # Extract data from request
+        analysis = data.get('analysis', {})
+        line_items = data.get('lineItems', [])
+        customer_info = data.get('customerInfo', {})
+        total_amount = data.get('totalAmount', 0)
+        
+        # Prepare data for PDF generator
+        estimate_data = {
+            'date': datetime.now().strftime('%m/%d/%Y'),
+            'customer_name': customer_info.get('name', 'N/A'),
+            'customer_address': customer_info.get('address', 'N/A'),
+            'customer_phone': customer_info.get('phone', 'N/A'),
+            'customer_email': customer_info.get('email', 'N/A'),
+            'assessment': {
+                'damage_type': analysis.get('damage_type', 'N/A'),
+                'severity': analysis.get('severity', 'N/A'),
+                'affected_area': analysis.get('affected_area_sqft', 0),
+                'classification': analysis.get('classification', {})
+            },
+            'line_items': [
+                {
+                    'description': item.get('description', ''),
+                    'quantity': item.get('quantity', 1),
+                    'unit_price': item.get('unitPrice', item.get('total', 0)),
+                    'total': item.get('total', 0)
+                }
+                for item in line_items
+            ],
+            'markup': data.get('markup', 0),
+            'equipment': data.get('equipment', []),
+            'photos': data.get('photos', [])
+        }
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator()
+        pdf_bytes = pdf_gen.generate_estimate_pdf(estimate_data)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"estimate_{timestamp}.pdf"
+        
+        return pdf_bytes, 200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f'attachment; filename={filename}'
+        }
+        
+    except Exception as e:
+        logger.error(f"PDF generation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404
